@@ -4,6 +4,20 @@ import numpy as np
 import random
 import time
 
+all_users = ["Alice", "Bob", "Charly"]
+with st.container(border=True):
+    users = st.multiselect("Users", all_users, default=all_users)
+    rolling_average = st.toggle("Rolling average")
+
+np.random.seed(42)
+data = pd.DataFrame(np.random.randn(20, len(users)), columns=users)
+if rolling_average:
+    data = data.rolling(7).mean().dropna()
+
+tab1, tab2 = st.tabs(["Chart", "Dataframe"])
+tab1.line_chart(data, height=250)
+tab2.dataframe(data, height=250, use_container_width=True)
+
 st.write("안녕, 오늘은 4학년이 되기 전 삶을 즐겁게 누릴 수 있는 방법을 알려줄게.")
 st.caption("주영이의 임고 직전 행복한 하루보내기 작전")
 
@@ -38,17 +52,6 @@ with st.chat_message("assistant"):
 st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 
-all_users = ["Alice", "Bob", "Charly"]
-with st.container(border=True):
-    users = st.multiselect("Users", all_users, default=all_users)
-    rolling_average = st.toggle("Rolling average")
 
-np.random.seed(42)
-data = pd.DataFrame(np.random.randn(20, len(users)), columns=users)
-if rolling_average:
-    data = data.rolling(7).mean().dropna()
 
-tab1, tab2 = st.tabs(["Chart", "Dataframe"])
-tab1.line_chart(data, height=250)
-tab2.dataframe(data, height=250, use_container_width=True)
 
