@@ -4,7 +4,7 @@ import numpy as np
 import random
 import time
 
-st.title("주영이의 앱프로그래밍 앱")
+st.title("주영이의 교육용 앱 만들기")
 all_users = ["Alice", "Bob", "Charly"]
 with st.container(border=True):
     users = st.multiselect("Users", all_users, default=all_users)
@@ -28,7 +28,7 @@ if "messages" not in st.session_state:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-if prompt := st.chat_input("What is up?"):
+if prompt := st.chat_input("뭐든 물어봐"):
         st.session_state.messages.append({"role":"user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -51,6 +51,7 @@ with st.chat_message("assistant"):
         message_placeholder.markdown(full_response + "|")
     message_placeholder.markdown(full_response)
 st.session_state.messages.append({"role": "assistant", "content": full_response})
+
 
 
 
