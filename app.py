@@ -4,6 +4,7 @@ import numpy as np
 import random
 import time
 
+st.title("주영이의 앱프로그래밍 앱")
 all_users = ["Alice", "Bob", "Charly"]
 with st.container(border=True):
     users = st.multiselect("Users", all_users, default=all_users)
@@ -50,6 +51,7 @@ with st.chat_message("assistant"):
         message_placeholder.markdown(full_response + "|")
     message_placeholder.markdown(full_response)
 st.session_state.messages.append({"role": "assistant", "content": full_response})
+
 
 
 
