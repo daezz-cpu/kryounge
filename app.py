@@ -14,35 +14,33 @@ import google.generativeai as genai
 st.set_page_config(page_title="현명한 꼬마 시장님", layout="wide", page_icon="🏙️")
 
 # -----------------------------------------------------------------------------------------
-# [AI Helper] Gemini AI 설정 및 오류 처리
-# -----------------------------------------------------------------------------------------
 def get_ai_response(prompt):
     """
     Gemini AI에게 응답을 요청합니다.
-    404 에러 등 모델 문제 발생 시 대체 모델을 시도하거나 규칙 기반 응답을 반환합니다.
+    실패 시 사용 가능한 모델 리스트를 확인하여 에러 메시지에 표시합니다.
     """
     if "GEMINI_API_KEY" not in st.secrets:
         return "🔑 API 키가 설정되지 않았어요."
 
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 1순위: 1.5-flash
+    # 시도할 모델 목록
+    candidate_models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro', 'gemini-1.0-pro']
+    
+    for model_name in candidate_models:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            return response.text
+        except Exception:
+            continue
+            
+    # 모든 모델 실패 시 디버깅 정보 출력
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        response = model.generate_content(prompt)
-        return response.text
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        return f"🤖 AI 연결 실패. (사용 가능한 모델: {available_models})\nAPI 키 권한이나 지역 설정을 확인해주세요."
     except Exception as e:
-        # 1순위 실패 시 로그 (디버깅용)
-        # print(f"Flash model failed: {e}")
-        pass
-        
-    # 2순위: pro
-    try:
-        model = genai.GenerativeModel('gemini-pro')
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        return f"🤖 AI 연결에 문제가 생겼어요. (오류 메시지: {e})\n잠시 후 다시 시도해보거나, 인터넷 연결을 확인해주세요."
+        return f"🤖 AI 치명적 오류: 모델 목록을 가져올 수 없습니다. ({e})\nAPI 키가 올바른지 확인해주세요."
 
 def analyze_persona_from_title(title):
     """
