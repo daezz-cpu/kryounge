@@ -279,8 +279,8 @@ with st.sidebar:
     st.plotly_chart(fig, use_container_width=True)
 
 # Main Area
-st.image(HEADER_IMAGE, use_column_width=True, caption="평화로운 우리 마을 전경")
 st.title("👑 현명한 꼬마 시장님 (Wise Little Mayor)")
+st.image(HEADER_IMAGE, use_column_width=True, caption="평화로운 우리 마을 전경")
 
 # Game Over Screen
 if st.session_state.game_over:
@@ -318,23 +318,7 @@ if st.session_state.game_over:
 else:
     # Active Game Screen
     
-    # 1. Last Turn Feedback (시민 반응 보여주기)
-    if st.session_state.last_feedback:
-        fb = st.session_state.last_feedback
-        with st.container(border=True):
-            st.subheader(f"📢 방금 선택의 결과 ({fb['problem']})")
-            st.info(f"**결과:** {fb['msg']}")
-            
-            st.markdown("**💬 시민들의 한마디:**")
-            cols = st.columns(len(fb['reactions']))
-            for idx, reaction in enumerate(fb['reactions']):
-                with cols[idx]:
-                    st.chat_message("user", avatar="👤") # 간단한 아바타 처리
-                    st.markdown(f"**{reaction['char']}**: {reaction['msg']}")
-
-    st.divider()
-    
-    # 2. New Problem Selection
+    # 1. New Problem Selection
     st.subheader("🚩 해결할 문제를 골라주세요!")
     
     # 아직 해결하지 않은 문제만 보여주고 싶다면 필터링 로직 추가 가능하지만,
@@ -365,3 +349,19 @@ else:
             st.warning(f"**🅱️ {p_data['B']['label']}**")
             if st.button("🅱️ 저 방법 선택!", key="btn_b", use_container_width=True):
                 execute_policy(selected_problem_name, "B")
+
+    st.divider()
+
+    # 2. Last Turn Feedback (시민 반응 보여주기)
+    if st.session_state.last_feedback:
+        fb = st.session_state.last_feedback
+        with st.container(border=True):
+            st.subheader(f"📢 방금 선택의 결과 ({fb['problem']})")
+            st.info(f"**결과:** {fb['msg']}")
+            
+            st.markdown("**💬 시민들의 한마디:**")
+            cols = st.columns(len(fb['reactions']))
+            for idx, reaction in enumerate(fb['reactions']):
+                with cols[idx]:
+                    st.chat_message("user", avatar="👤") # 간단한 아바타 처리
+                    st.markdown(f"**{reaction['char']}**: {reaction['msg']}")
