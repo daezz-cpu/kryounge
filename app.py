@@ -60,57 +60,56 @@ def analyze_persona_from_title(title):
     )
     category = get_ai_response(prompt).strip().replace("'", "").replace('"', "")
     
-    # 매핑 로직
-    if "Traffic" in category or "교통" in category: return "등굣길 아이"
-    if "Environment" in category or "환경" in category: return "청소부 아저씨"
-    if "Safety" in category or "안전" in category: return "경찰관"
-    return "마을 주민" # 기본값
-
-def summarize_interview(chat_history):
-    """
-    이전 인터뷰 내용을 요약합니다.
-    """
-    if not chat_history:
-        return "진행된 인터뷰가 없습니다."
-        
-    conversation = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
-    prompt = (
-        f"Summarize the following interview conversation in 1-2 Korean sentences. "
-        f"Focus on the core problem and the resident's complaint.\n\n"
-        f"{conversation}"
-    )
-    return get_ai_response(prompt)
-
 def evaluate_policy_with_ai(idea, problem_context):
     """
     정책 아이디어를 AI가 평가합니다 (현실성, 효율성, 창의성).
-    점수(0-100)와 피드백을 반환합니다.
+    점수(0-100), 좋은 점, 보완할 점을 반환합니다.
     """
     prompt = (
         f"Context: {problem_context}\n"
         f"Policy Idea: {idea}\n\n"
         f"Evaluate this policy idea based on Reality, Efficiency, and Creativity. "
+        f"If the idea is perfect, you don't need to provide 'IMPROVE'. "
         f"Return the response in the following format ONLY:\n"
         f"SCORE: [0-100 integer]\n"
-        f"FEEDBACK: [1 sentence friendly feedback in Korean]"
+        f"GOOD: [1 sentence praising the good points in Korean]\n"
+        f"IMPROVE: [1 sentence suggestion for improvement in Korean (Optional, only if needed)]"
     )
     response = get_ai_response(prompt)
     
-    # 파싱 로직 (기본값 설정)
+    # 파싱 로직
     score = 50
-    feedback = "아이디어가 접수되었습니다."
+    good = "아이디어가 접수되었습니다."
+    improve = None
     
     try:
         lines = response.strip().split('\n')
         for line in lines:
             if "SCORE:" in line:
                 score = int(line.replace("SCORE:", "").strip())
-            if "FEEDBACK:" in line:
-                feedback = line.replace("FEEDBACK:", "").strip()
+            if "GOOD:" in line:
+                good = line.replace("GOOD:", "").strip()
+            if "IMPROVE:" in line:
+                val = line.replace("IMPROVE:", "").strip()
+                if val and val.lower() != "none":
+                    improve = val
     except:
         pass
         
-    return score, feedback
+    return score, good, improve
+
+def check_improvement(original, feedback, new_idea):
+    """
+    보완된 아이디어가 피드백을 잘 반영했는지 확인합니다.
+    """
+    prompt = (
+        f"Original Idea: {original}\n"
+        f"Feedback to improve: {feedback}\n"
+        f"New Idea: {new_idea}\n\n"
+        f"Did the user address the feedback and improve the idea? Return ONLY 'YES' or 'NO'."
+    )
+    res = get_ai_response(prompt).strip().upper()
+    return "YES" in res
 
 # -----------------------------------------------------------------------------------------
 # [Helper Functions] 공통 함수 & 세션 초기화
@@ -142,15 +141,20 @@ def init_game():
     if 'news_category' not in st.session_state:
         st.session_state.news_category = "교통"
     
-    # Tab 2 Summary Cache
+    # Tab 2 States
     if 'interview_summary' not in st.session_state:
         st.session_state.interview_summary = ""
+    if 'policy_eval_result' not in st.session_state:
+        st.session_state.policy_eval_result = {} # {score, good, improve}
+    if 'bonus_claimed' not in st.session_state:
+        st.session_state.bonus_claimed = False
         
     # 4. 챗봇 상태 (AI 재연동)
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     if 'current_persona' not in st.session_state:
         st.session_state.current_persona = None
+    st.session_state.interview_summary = ""
 
 def reset_game():
     st.session_state.budget = 0
@@ -165,6 +169,8 @@ def reset_game():
     st.session_state.chat_history = []
     st.session_state.current_persona = None
     st.session_state.interview_summary = ""
+    st.session_state.policy_eval_result = {}
+    st.session_state.bonus_claimed = False
 
 # 문제 데이터 (ID, 제목, 설명, 선택지)
 problems = [
@@ -370,7 +376,7 @@ with tab2:
     
     # 1. Show Context (Step 1 Info)
     if st.session_state.news_title:
-        st.success(f"📌 해결해야 할 문제: **{st.session_state.news_title}**")
+        st.success(f"📌 해결해야 할 문제: **{st.session_state.news_title}** [{st.session_state.news_category}]")
         
         # Generate Summary if needed
         if not st.session_state.interview_summary and st.session_state.chat_history:
@@ -382,15 +388,20 @@ with tab2:
     else:
         st.warning("1단계 뉴스룸을 먼저 완료하면, 더 정확한 정책 심사를 받을 수 있어요!")
     
-    idea_in = st.text_area("나만의 아이디어를 적어주세요. (구체적일수록 예산이 많아요!)", height=100)
+    # Guidance
+    st.caption("💡 힌트: **What?** (어떤 정책?), **How?** (어떻게 실현?), **Why?** (왜 필요?) 내용을 포함하면 더 높은 점수를 받아요!")
+    idea_in = st.text_area("나만의 아이디어를 적어주세요.", height=150)
     
     if st.button("🤖 AI 심사 받기"):
         if not st.session_state.step2_status:
             
             # AI Evaluation
             with st.spinner("AI 심사위원이 정책을 분석 중입니다..."):
-                problem_ctx = f"Problem: {st.session_state.news_title}, Interview Summary: {st.session_state.interview_summary}"
-                score, feedback = evaluate_policy_with_ai(idea_in, problem_ctx)
+                problem_ctx = f"Problem: {st.session_state.news_title}, Category: {st.session_state.news_category}, Interview: {st.session_state.interview_summary}"
+                score, good, improve = evaluate_policy_with_ai(idea_in, problem_ctx)
+                
+                # Save Result
+                st.session_state.policy_eval_result = {"score": score, "good": good, "improve": improve}
                 
                 # Tier Logic
                 if score >= 80:
@@ -409,13 +420,50 @@ with tab2:
             st.session_state.budget += score_acc
             st.session_state.step2_status = True
             
-            st.info(f"심사 결과 ({score}점): {badge}\nAI 피드백: {feedback}")
-            st.metric("확보한 예산", f"+{score_acc} 코인")
             st.balloons()
             time.sleep(1)
-            st.rerun() # [UX Fix] Update Sidebar Immediately
+            st.rerun() # [UX Fix] Update Sidebar
         else:
-            st.warning("이미 정책 지원금을 받았습니다. 3단계로 이동하세요!")
+            st.warning("이미 정책 지원금을 받았습니다.")
+
+    # Show Result & Revision Loop
+    if st.session_state.step2_status and st.session_state.policy_eval_result:
+        res = st.session_state.policy_eval_result
+        st.divider()
+        st.subheader(f"📊 심사 결과: {res['score']}점")
+        
+        st.success(f"✅ 잘한 점: {res['good']}")
+        
+        if res['improve']:
+            st.warning(f"🔧 보완할 점: {res['improve']}")
+            
+            if not st.session_state.bonus_claimed:
+                st.markdown("---")
+                st.write("### 🧩 아이디어 보완하기 (+30코인)")
+                st.write("심사위원의 피드백을 반영하여 아이디어를 더 멋지게 다듬어보세요!")
+                
+                refined_idea = st.text_area("보완된 아이디어를 입력하세요:", placeholder="피드백 내용을 반영해서 적어보세요.")
+                
+                if st.button("✨ 보완 제출"):
+                    if len(refined_idea) > 5:
+                        with st.spinner("AI가 보완 여부를 확인 중입니다..."):
+                            is_improved = check_improvement(idea_in, res['improve'], refined_idea)
+                            
+                            if is_improved:
+                                st.session_state.budget += 30
+                                st.session_state.bonus_claimed = True
+                                st.balloons()
+                                st.success("멋지게 보완하셨군요! 추가 예산 30코인을 받았습니다.")
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("피드백 내용이 충분히 반영되지 않은 것 같아요. 다시 한번 고민해보세요!")
+                    else:
+                        st.warning("내용을 조금 더 적어주세요.")
+            else:
+                st.info("🎉 보완 미션 완료! 추가 보너스를 이미 받았습니다.")
+        else:
+            st.info("완벽한 정책입니다! 더 이상 보완할 점이 없네요. 👏")
 
 # -----------------------------------------------------------------------------------------
 # [Tab 3] 꼬마 시장님
