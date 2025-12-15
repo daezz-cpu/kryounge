@@ -1,16 +1,18 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import random
+import time
 
 # 페이지 설정
-st.set_page_config(page_title="현명한 꼬마 시장님", layout="wide")
+st.set_page_config(page_title="우리 지역 문제를 찾아 현명하게 해결해보자!", layout="wide", page_icon="🏙️")
 
 # -----------------------------------------------------------------------------------------
-# 1. Game Data (문제 및 시민 반응 데이터)
-# 1. Game Data (문제 및 시민 반응 데이터)
-# 실제 사용할 때는 assets 폴더에 해당 이미지 파일(png/jpg)을 넣어주세요.
-HEADER_IMAGE = "assets/village_map.png"
+# [Shared Data] 공통 데이터
+# -----------------------------------------------------------------------------------------
 
+# Tab 3 게임용 데이터
+HEADER_IMAGE = "assets/village_map.png"
 problems = {
     "스쿨존 주차난": {
         "image": "assets/school_zone.jpg",
@@ -183,13 +185,13 @@ problems = {
 }
 
 # -----------------------------------------------------------------------------------------
-# 2. Helper Functions (함수)
-
+# [Helper Functions] 공통 함수
+# -----------------------------------------------------------------------------------------
 def init_game():
     if 'budget' not in st.session_state:
         st.session_state.budget = 100
     if 'turns' not in st.session_state:
-        st.session_state.turns = 5  # 총 5회 기회
+        st.session_state.turns = 5
     if 'stats' not in st.session_state:
         st.session_state.stats = {'😊행복': 50, '🌳환경': 50, '🛡️안전': 50, '💰경제': 50}
     if 'logs' not in st.session_state:
@@ -197,7 +199,7 @@ def init_game():
     if 'game_over' not in st.session_state:
         st.session_state.game_over = False
     if 'last_feedback' not in st.session_state:
-        st.session_state.last_feedback = None  # (problem, choice_label, result_msg, reactions)
+        st.session_state.last_feedback = None
 
 def reset_game():
     st.session_state.budget = 100
@@ -206,29 +208,24 @@ def reset_game():
     st.session_state.logs = []
     st.session_state.game_over = False
     st.session_state.last_feedback = None
-    st.rerun()
 
 def execute_policy(problem_name, choice_key):
     problem = problems[problem_name]
     choice = problem[choice_key]
     
-    # 예산 확인
     if st.session_state.budget < choice['cost']:
         st.error("코인이 부족해요! 저금통이 텅 비었어요 ㅠㅠ")
         return
 
-    # 1. 자원 업데이트
     st.session_state.budget -= choice['cost']
     st.session_state.turns -= 1
     
-    # 2. 스탯 업데이트 & 알림 준비
     bad_news = []
     for stat, value in choice['effect'].items():
         st.session_state.stats[stat] = max(0, min(100, st.session_state.stats[stat] + value))
         if value < 0:
             bad_news.append(f"{stat} (▼{abs(value)})")
     
-    # 3. 결과 메시지 생성 (Toast용)
     if bad_news:
          toast_msg = f"앗! 나쁜 소식이 있어요: {', '.join(bad_news)}"
          icon = "📉"
@@ -238,7 +235,6 @@ def execute_policy(problem_name, choice_key):
     
     st.toast(toast_msg, icon=icon)
     
-    # 4. 로그 & 피드백 저장 (다음 화면 표시용)
     log_entry = f"[{problem_name}]에서 '{choice['label']}' 선택"
     st.session_state.logs.append(log_entry)
     
@@ -249,119 +245,241 @@ def execute_policy(problem_name, choice_key):
         "reactions": choice['reactions']
     }
     
-    # 5. 게임 종료 체크
     if st.session_state.turns <= 0:
         st.session_state.game_over = True
-    
-    st.rerun()
 
 # -----------------------------------------------------------------------------------------
-# 3. UI Layout (화면 구성)
+# [Main App Structure]
+# -----------------------------------------------------------------------------------------
 
-init_game()
+st.title("🏙️ 우리 지역 문제를 찾아 현명하게 해결해보자!")
 
-# Sidebar
-with st.sidebar:
-    st.title("📊 내 주머니 & 동네 점수")
-    st.metric(label="💰 남은 코인", value=f"{st.session_state.budget}개")
-    st.metric(label="⏳ 남은 선택 기회", value=f"{st.session_state.turns}번")
-    
-    st.divider()
-    
-    st.caption("모양이 둥글고 클수록 훌륭한 시장님!")
-    df_stats = pd.DataFrame(dict(
-        r=list(st.session_state.stats.values()),
-        theta=list(st.session_state.stats.keys())
-    ))
-    fig = px.line_polar(df_stats, r='r', theta='theta', line_close=True, range_r=[0, 100])
-    fig.update_traces(fill='toself')
-    fig.update_layout(title="우리 동네 점수표", margin=dict(t=30, b=30, l=30, r=30))
-    st.plotly_chart(fig, use_container_width=True)
+# Tabs 구성
+tab1, tab2, tab3 = st.tabs(["📰 1단계: 뉴스룸", "💡 2단계: 정책 연구소", "🏛️ 3단계: 꼬마 시장님"])
 
-# Main Area
-st.title("👑 현명한 꼬마 시장님 (Wise Little Mayor)")
-st.image(HEADER_IMAGE, use_column_width=True, caption="평화로운 우리 마을 전경")
+# -----------------------------------------------------------------------------------------
+# [Tab 1] 뉴스룸 (Problem Finding)
+# -----------------------------------------------------------------------------------------
+with tab1:
+    st.header("📰 우리 동네에 무슨 일이?!")
+    st.write("우리 지역의 심각한 문제를 검색해서 찾아보세요.")
+    
+    # 1. Fake Search Engine
+    col_search, col_btn = st.columns([4, 1])
+    with col_search:
+        search_query = st.text_input("검색어를 입력하세요 (예: 환경, 안전)", placeholder="검색어를 입력하세요...")
+    with col_btn:
+        st.write("") # 줄맞춤용
+        st.write("")
+        search_clicked = st.button("🔍 뉴스 검색")
 
-# Game Over Screen
-if st.session_state.game_over:
-    st.header("🎓 시장님의 임기가 끝났습니다!")
-    
-    st.success("""
-    "완벽한 해결책은 없었죠? 하나를 얻으면 하나를 양보해야 하는 것이 지역 문제 해결의 과정입니다.
-    하지만 여러분이 고민한 만큼 우리 마을은 더 살기 좋은 곳이 되었을 거예요.
-    중요한 건 결과보다, 이웃을 위해 고민했던 시장님의 따뜻한 마음입니다! 👏"
-    """)
-    
-    # 최종 성적표
-    stats = st.session_state.stats
-    max_stat = max(stats, key=stats.get)
-    if max_stat == "😊행복": title = "😁 스마일 시장님"
-    elif max_stat == "🌳환경": title = "🌿 숲속의 시장님"
-    elif max_stat == "🛡️안전": title = "🛡️ 보디가드 시장님"
-    else: title = "💰 부자 시장님"
-    
-    st.subheader(f"당신의 별명은: {title}")
-    
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("😊행복", stats['😊행복'])
-    c2.metric("🌳환경", stats['🌳환경'])
-    c3.metric("🛡️안전", stats['🛡️안전'])
-    c4.metric("💰경제", stats['💰경제'])
-    
-    st.subheader("📜 내가 한 일들")
-    for log in st.session_state.logs:
-        st.text(f"- {log}")
+    if search_clicked or search_query:
+        st.subheader("🚨 [속보] 우리 동네 주요 뉴스")
         
-    if st.button("🔄 새로운 임기 시작하기 (다시 하기)"):
-        reset_game()
-
-else:
-    # Active Game Screen
-    
-    # 1. New Problem Selection
-    st.subheader("🚩 해결할 문제를 골라주세요!")
-    
-    # 아직 해결하지 않은 문제만 보여주고 싶다면 필터링 로직 추가 가능하지만,
-    # 여기선 5번의 기회 동안 자유롭게 선택하도록 함 (단, 선택 시 로그가 쌓임)
-    selected_problem_name = st.selectbox("어디로 가볼까요?", list(problems.keys()))
-    
-    if selected_problem_name:
-        p_data = problems[selected_problem_name]
+        # 뉴스 카드 3개 (Fake Data)
+        news_data = [
+            {"title": "학교 앞 등굣길, 불법 주차로 아슬아슬!", "tag": "교통/안전", "content": "어린이 보호구역인데도 차들이 쌩쌩... 아이들이 위험해요!", "persona": "학부모"},
+            {"title": "여름만 되면 악취 진동... 쓰레기 산 위기", "tag": "환경/위생", "content": "치워도 치워도 끝이 없는 쓰레기, 주민들 고통 호소.", "persona": "환경미화원"},
+            {"title": "갈 곳 없는 아이들, 낡은 놀이터에서 '쿵'", "tag": "복지", "content": "녹슨 그네와 부서진 미끄럼틀... 놀 곳이 없어요.", "persona": "초등학생"}
+        ]
         
-        col_img, col_desc = st.columns([1, 1.5])
-        with col_img:
-            st.image(p_data['image'], caption=selected_problem_name, use_column_width=True)
-        with col_desc:
-            st.markdown(f"### Q. {selected_problem_name}")
-            st.write(p_data['description'])
-        
-        st.write("---")
-        
-        c1, c2 = st.columns(2)
-        with c1:
-            st.info(f"**🅰️ {p_data['A']['label']}**")
-            # 미리보기 힌트 (선택 사항)
-            # st.caption(f"예상 효과: {p_data['A']['effect']}") 
-            if st.button("🅰️ 이 방법 선택!", key="btn_a", use_container_width=True):
-                execute_policy(selected_problem_name, "A")
-                
-        with c2:
-            st.warning(f"**🅱️ {p_data['B']['label']}**")
-            if st.button("🅱️ 저 방법 선택!", key="btn_b", use_container_width=True):
-                execute_policy(selected_problem_name, "B")
+        c1, c2, c3 = st.columns(3)
+        for i, news in enumerate(news_data):
+            with [c1, c2, c3][i]:
+                with st.container(border=True):
+                    st.markdown(f"**{news['title']}**")
+                    st.caption(f"#{news['tag']}")
+                    st.write(news['content'])
+                    if st.button(f"🗣️ {news['persona']} 인터뷰 하기", key=f"news_btn_{i}"):
+                        st.session_state.selected_news = news
 
     st.divider()
 
-    # 2. Last Turn Feedback (시민 반응 보여주기)
-    if st.session_state.last_feedback:
-        fb = st.session_state.last_feedback
-        with st.container(border=True):
-            st.subheader(f"📢 방금 선택의 결과 ({fb['problem']})")
-            st.info(f"**결과:** {fb['msg']}")
+    # 2. AI Interview (Rule-based Chatbot)
+    if 'selected_news' in st.session_state:
+        news = st.session_state.selected_news
+        st.subheader(f"💬 주민 인터뷰: {news['persona']}")
+        st.info(f"**상황**: {news['title']}")
+
+        # 채팅 기록 초기화
+        if 'chat_history' not in st.session_state:
+            st.session_state.chat_history = []
+            # 첫 인사 메시지
+            greeting = f"시장님! 오셨군요. 지금 '{news['title']}' 때문에 저희가 너무 힘들어요. 어떻게 좀 해주세요 ㅠㅠ"
+            st.session_state.chat_history.append({"role": "assistant", "content": greeting})
+
+        # 채팅 표시
+        for msg in st.session_state.chat_history:
+            st.chat_message(msg['role']).write(msg['content'])
+
+        # 사용자 입력
+        user_input = st.chat_input("주민에게 할 말을 입력하세요...")
+        if user_input:
+            st.session_state.chat_history.append({"role": "user", "content": user_input})
+            st.chat_message("user").write(user_input)
             
-            st.markdown("**💬 시민들의 한마디:**")
-            cols = st.columns(len(fb['reactions']))
-            for idx, reaction in enumerate(fb['reactions']):
-                with cols[idx]:
-                    st.chat_message("user", avatar="👤") # 간단한 아바타 처리
-                    st.markdown(f"**{reaction['char']}**: {reaction['msg']}")
+            # Rule-based Response (간단한 로직)
+            responses = [
+                "정말 해결해 주실 거죠? 믿습니다 시장님!",
+                "예산이 부족하다면 어쩔 수 없지만... 그래도 걱정이에요.",
+                "빨리 해결책을 찾아주세요! 현기증 난단 말이에요.",
+                "다른 동네는 벌써 해결했다던데... 우리 동네는 왜 이럴까요?"
+            ]
+            bot_reply = random.choice(responses)
+            
+            time.sleep(0.5) # 생각하는 척
+            st.session_state.chat_history.append({"role": "assistant", "content": bot_reply})
+            st.chat_message("assistant").write(bot_reply)
+
+
+# -----------------------------------------------------------------------------------------
+# [Tab 2] 정책 연구소 (Solution Brainstorming)
+# -----------------------------------------------------------------------------------------
+with tab2:
+    st.header("💡 정책 아이디어 연구소")
+    st.write("여러분이 생각한 기발한 해결책을 적어주세요. AI가 평가해 드립니다!")
+
+    with st.expander("📝 정책 제안서 작성하기", expanded=True):
+        category = st.selectbox("어떤 분야인가요?", ["교통/안전", "환경/청소", "경제/일자리", "문화/복지"])
+        idea_text = st.text_area("나만의 해결 방법은 무엇인가요?", placeholder="예: 학교 앞에 튼튼한 울타리를 만들고, CCTV를 10개 설치해요!")
+        
+        if st.button("🤖 AI 평가 받기"):
+            if len(idea_text) < 5:
+                st.warning("아이디어가 너무 짧아요! 조금 더 자세히 적어주세요.")
+            else:
+                st.spinner("AI가 정책을 분석 중입니다...")
+                time.sleep(1.5) # 분석하는 척
+                
+                st.success("분석 완료! 리포트가 도착했습니다.")
+                
+                # Rule-based Evaluation Simulation
+                keywords_safety = ["CCTV", "경찰", "순찰", "울타리", "가로등"]
+                keywords_eco = ["나무", "쓰레기통", "자전거", "청소", "재활용"]
+                keywords_money = ["세금", "벌금", "지원금", "건설"]
+                
+                score_safety = 0
+                score_eco = 0
+                score_happy = 5 # 기본
+                
+                if any(k in idea_text for k in keywords_safety): score_safety += 15
+                if any(k in idea_text for k in keywords_eco): score_eco += 15
+                if any(k in idea_text for k in keywords_money): score_happy -= 5
+                
+                st.subheader("📊 AI 예상 점수표")
+                c1, c2, c3 = st.columns(3)
+                c1.metric("예상 안전 점수", f"+{score_safety}점", delta_color="normal")
+                c2.metric("예상 환경 점수", f"+{score_eco}점", delta_color="normal")
+                c3.metric("예상 시민 행복", f"+{score_happy}점", delta_color="normal")
+                
+                st.subheader("🕵️ AI 분석 코멘트")
+                if score_safety > 10:
+                    st.info("이 정책은 **마을의 안전**을 크게 지켜줄 것 같아요!")
+                elif score_eco > 10:
+                    st.info("이 정책은 **깨끗한 환경**을 만드는 데 아주 좋군요!")
+                else:
+                    st.info("참신한 아이디어네요! 예산이 얼마나 들지도 한번 고민해보세요.")
+
+
+# -----------------------------------------------------------------------------------------
+# [Tab 3] 꼬마 시장님 (Main Game)
+# -----------------------------------------------------------------------------------------
+with tab3:
+    init_game()
+    
+    # Sidebar only for Tab 3 (Use columns specifically for layout within tab to simulate sidebar effect if needed, 
+    # but Streamlit sidebar is global. Let's keep sidebar global but generic, or update it based on tabs?
+    # For simplicity, we keep the global sidebar but make it relevant to the game.)
+    
+    with st.sidebar:
+        st.title("📊 게임 현황판")
+        if st.session_state.game_over:
+             st.info("게임이 종료되었습니다.")
+        else:
+            st.metric(label="💰 남은 코인", value=f"{st.session_state.budget}개")
+            st.metric(label="⏳ 남은 기회", value=f"{st.session_state.turns}번")
+        
+        st.divider()
+        df_stats = pd.DataFrame(dict(
+            r=list(st.session_state.stats.values()),
+            theta=list(st.session_state.stats.keys())
+        ))
+        fig = px.line_polar(df_stats, r='r', theta='theta', line_close=True, range_r=[0, 100])
+        fig.update_traces(fill='toself')
+        fig.update_layout(title="우리 동네 점수표", margin=dict(t=30, b=30, l=30, r=30))
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("※ 3단계 게임 탭에서만 변경됩니다.")
+
+    # Game Main Content
+    st.title("👑 현명한 꼬마 시장님 (Simulation Rules)")
+    st.image(HEADER_IMAGE, use_column_width=True, caption="평화로운 우리 마을 전경")
+
+    if st.session_state.game_over:
+        st.header("🎓 시장님의 임기가 끝났습니다!")
+        st.success("""
+        "완벽한 해결책은 없었죠? 하나를 얻으면 하나를 양보해야 하는 것이 지역 문제 해결의 과정입니다.
+        하지만 여러분이 고민한 만큼 우리 마을은 더 살기 좋은 곳이 되었을 거예요.
+        중요한 건 결과보다, 이웃을 위해 고민했던 시장님의 따뜻한 마음입니다! 👏"
+        """)
+        
+        stats = st.session_state.stats
+        max_stat = max(stats, key=stats.get)
+        if max_stat == "😊행복": title = "😁 스마일 시장님"
+        elif max_stat == "🌳환경": title = "🌿 숲속의 시장님"
+        elif max_stat == "🛡️안전": title = "🛡️ 보디가드 시장님"
+        else: title = "💰 부자 시장님"
+        
+        st.subheader(f"당신의 별명은: {title}")
+        
+        cols = st.columns(4)
+        for i, (k, v) in enumerate(stats.items()):
+            cols[i].metric(k, v)
+        
+        st.subheader("📜 내가 한 일들")
+        for log in st.session_state.logs:
+            st.text(f"- {log}")
+            
+        if st.button("🔄 새로운 임기 시작하기 (다시 하기)"):
+            reset_game()
+
+    else:
+        # Game Active
+        st.subheader("🚩 해결할 문제를 골라주세요!")
+        selected_problem_name = st.selectbox("어디로 가볼까요?", list(problems.keys()))
+        
+        if selected_problem_name:
+            p_data = problems[selected_problem_name]
+            
+            col_img, col_desc = st.columns([1, 1.5])
+            with col_img:
+                st.image(p_data['image'], caption=selected_problem_name, use_column_width=True)
+            with col_desc:
+                st.markdown(f"### Q. {selected_problem_name}")
+                st.write(p_data['description'])
+            
+            st.write("---")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                st.info(f"**🅰️ {p_data['A']['label']}**")
+                if st.button("🅰️ 이 방법 선택!", key="btn_a", use_container_width=True):
+                    execute_policy(selected_problem_name, "A")
+            with c2:
+                st.warning(f"**🅱️ {p_data['B']['label']}**")
+                if st.button("🅱️ 저 방법 선택!", key="btn_b", use_container_width=True):
+                    execute_policy(selected_problem_name, "B")
+
+        st.divider()
+
+        # Feedback
+        if st.session_state.last_feedback:
+            fb = st.session_state.last_feedback
+            with st.container(border=True):
+                st.subheader(f"📢 방금 선택의 결과 ({fb['problem']})")
+                st.info(f"**결과:** {fb['msg']}")
+                
+                st.markdown("**💬 시민들의 한마디:**")
+                cols = st.columns(len(fb['reactions']))
+                for idx, reaction in enumerate(fb['reactions']):
+                    with cols[idx]:
+                        st.chat_message("user", avatar="👤") 
+                        st.markdown(f"**{reaction['char']}**: {reaction['msg']}")
