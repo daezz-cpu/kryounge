@@ -27,10 +27,13 @@ def get_ai_response(prompt):
     # 시도할 모델 목록 (사용 가능한 모델 우선)
     candidate_models = [
         'gemini-2.5-flash', 
-        'gemini-2.0-flash', 
-        'gemini-2.5-pro', 
-        'gemini-1.5-flash', 
-        'gemini-pro'
+        'gemini-2.5-pro',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite-preview-02-05',
+        'gemini-flash-latest',
+        'gemini-pro-latest',
+        'models/gemini-2.5-flash',
+        'models/gemini-2.0-flash'
     ]
     
     for model_name in candidate_models:
