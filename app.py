@@ -52,13 +52,20 @@ def analyze_persona_from_title(title):
     """
     기사 제목을 분석하여 적절한 페르소나를 추천합니다.
     """
+    persona_list = ['등굣길 아이', '청소부 아저씨', '경찰관', '마을 주민']
     prompt = (
-        f"Analyze the following news title and categorize it into one of these categories: "
-        f"['Traffic', 'Environment', 'Safety', 'Economy', 'Other']. "
-        f"Return ONLY the category name.\n\n"
-        f"News Title: {title}"
+        f"Analyze the news title '{title}'. "
+        f"Select the most relevant persona from this list: {persona_list}. "
+        f"You MUST select one from the list. "
+        f"If the title is vague or you are unsure, default to '마을 주민'. "
+        f"Return ONLY the persona name."
     )
-    category = get_ai_response(prompt).strip().replace("'", "").replace('"', "")
+    result = get_ai_response(prompt).strip().replace("'", "").replace('"', "")
+    
+    # Fallback Logic
+    if result not in persona_list:
+        return "마을 주민"
+    return result
     
 def evaluate_policy_with_ai(idea, problem_context):
     """
@@ -123,7 +130,13 @@ def check_improvement(original, feedback, new_idea):
         f"Original Idea: {original}\n"
         f"Feedback to improve: {feedback}\n"
         f"New Idea: {new_idea}\n\n"
-        f"Did the user address the feedback and improve the idea? Return ONLY 'YES' or 'NO'."
+        f"Determine if the student has made an effort to improve the idea based on the feedback.\n"
+        f"Criteria for 'YES':\n"
+        f"1. Does the new idea include at least one KEYWORD from the feedback?\n"
+        f"2. Is there ANY sign of effort to address the feedback?\n"
+        f"If either of these is true, return 'YES'. Be very generous and encouraging.\n"
+        f"Only return 'NO' if the new idea is completely irrelevant or improved nothing.\n"
+        f"Return ONLY 'YES' or 'NO'."
     )
     res = get_ai_response(prompt).strip().upper()
     return "YES" in res
