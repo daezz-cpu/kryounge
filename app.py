@@ -3,6 +3,21 @@ import pandas as pd
 import plotly.express as px
 import random
 import time
+import google.generativeai as genai
+
+# -----------------------------------------------------------------------------------------
+# [Gemini AI Setup]
+# -----------------------------------------------------------------------------------------
+try:
+    if "GEMINI_API_KEY" in st.secrets:
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        model = genai.GenerativeModel('gemini-pro')
+        AI_AVAILABLE = True
+    else:
+        AI_AVAILABLE = False
+except Exception as e:
+    AI_AVAILABLE = False
+    st.error(f"AI 연결 오류: {e}")
 
 # 페이지 설정
 st.set_page_config(page_title="우리 지역 문제를 찾아 현명하게 해결해보자!", layout="wide", page_icon="🏙️")
@@ -318,16 +333,27 @@ with tab1:
             st.session_state.chat_history.append({"role": "user", "content": user_input})
             st.chat_message("user").write(user_input)
             
-            # Rule-based Response (간단한 로직)
-            responses = [
-                "정말 해결해 주실 거죠? 믿습니다 시장님!",
-                "예산이 부족하다면 어쩔 수 없지만... 그래도 걱정이에요.",
-                "빨리 해결책을 찾아주세요! 현기증 난단 말이에요.",
-                "다른 동네는 벌써 해결했다던데... 우리 동네는 왜 이럴까요?"
-            ]
-            bot_reply = random.choice(responses)
+            # Real AI Response
+            if AI_AVAILABLE:
+                with st.spinner(f"{news['persona']}님이 생각 중입니다..."):
+                    try:
+                        prompt = f"""
+                        당신은 이 마을에 사는 '{news['persona']}'입니다.
+                        현재 겪고 있는 문제는 '{news['title']}'입니다.
+                        상대방은 이 마을의 '꼬마 시장님'입니다.
+                        시장님(사용자)의 말: "{user_input}"
+                        
+                        위 상황에 맞춰서, 10살 아이도 이해하기 쉬운 친절하고 호소력 짙은 말투로 1~2문장으로 대답해주세요.
+                        정말 힘든 상황임을 강조하세요.
+                        """
+                        response = model.generate_content(prompt)
+                        bot_reply = response.text
+                    except Exception as e:
+                        bot_reply = "시장님, 제 목소리가 잘 안 들리나요? (AI 오류)"
+            else:
+                # Fallback
+                bot_reply = "시장님, 정말 해결해 주실 거죠? (AI 키를 확인해주세요)"
             
-            time.sleep(0.5) # 생각하는 척
             st.session_state.chat_history.append({"role": "assistant", "content": bot_reply})
             st.chat_message("assistant").write(bot_reply)
 
@@ -347,37 +373,65 @@ with tab2:
             if len(idea_text) < 5:
                 st.warning("아이디어가 너무 짧아요! 조금 더 자세히 적어주세요.")
             else:
-                st.spinner("AI가 정책을 분석 중입니다...")
-                time.sleep(1.5) # 분석하는 척
+                st.spinner("AI가 정책을 정밀 분석 중입니다...")
                 
+                if AI_AVAILABLE:
+                    try:
+                        prompt = f"""
+                        사용자가 제안한 정책: "{idea_text}"
+                        
+                        이 정책을 다음 3가지 항목으로 분석해서 점수와 코멘트를 주세요.
+                        대상 독자는 초등학교 4학년입니다. 쉽고 재미있게 설명해주세요.
+                        
+                        1. 안전 점수 (-10 ~ +10 사이 정수)
+                        2. 환경 점수 (-10 ~ +10 사이 정수)
+                        3. 행복 점수 (-10 ~ +10 사이 정수)
+                        4. 종합 코멘트 (2~3문장)
+                        
+                        출력 형식 (반드시 이 포맷을 지켜주세요):
+                        안전: [점수]
+                        환경: [점수]
+                        행복: [점수]
+                        코멘트: [내용]
+                        """
+                        response = model.generate_content(prompt)
+                        result_text = response.text
+                        
+                        # 파싱 로직 (간단하게 구현)
+                        lines = result_text.strip().split('\n')
+                        score_safety = 0
+                        score_eco = 0
+                        score_happy = 0
+                        comment = "분석을 완료했습니다."
+                        
+                        for line in lines:
+                            if "안전:" in line: score_safety = int(line.split(":")[1].strip().replace("점",""))
+                            if "환경:" in line: score_eco = int(line.split(":")[1].strip().replace("점",""))
+                            if "행복:" in line: score_happy = int(line.split(":")[1].strip().replace("점",""))
+                            if "코멘트:" in line: comment = line.split(":")[1].strip()
+                        
+                    except Exception as e:
+                         st.error("AI가 피곤해서 잠들었나봐요. 다시 시도해주세요.")
+                         score_safety, score_eco, score_happy = 0, 0, 0
+                         comment = f"오류 발생: {e}"
+                else:
+                    # Fallback Logic
+                    st.warning("AI 키가 설정되지 않았습니다. 기본 로직으로 분석합니다.")
+                    score_safety = 10 if "안전" in idea_text else 0
+                    score_eco = 10 if "환경" in idea_text else 0
+                    score_happy = 5
+                    comment = "AI가 연결되지 않아 정확한 분석이 어려워요."
+
                 st.success("분석 완료! 리포트가 도착했습니다.")
-                
-                # Rule-based Evaluation Simulation
-                keywords_safety = ["CCTV", "경찰", "순찰", "울타리", "가로등"]
-                keywords_eco = ["나무", "쓰레기통", "자전거", "청소", "재활용"]
-                keywords_money = ["세금", "벌금", "지원금", "건설"]
-                
-                score_safety = 0
-                score_eco = 0
-                score_happy = 5 # 기본
-                
-                if any(k in idea_text for k in keywords_safety): score_safety += 15
-                if any(k in idea_text for k in keywords_eco): score_eco += 15
-                if any(k in idea_text for k in keywords_money): score_happy -= 5
                 
                 st.subheader("📊 AI 예상 점수표")
                 c1, c2, c3 = st.columns(3)
-                c1.metric("예상 안전 점수", f"+{score_safety}점", delta_color="normal")
-                c2.metric("예상 환경 점수", f"+{score_eco}점", delta_color="normal")
-                c3.metric("예상 시민 행복", f"+{score_happy}점", delta_color="normal")
+                c1.metric("예상 안전 점수", f"{score_safety:+d}점")
+                c2.metric("예상 환경 점수", f"{score_eco:+d}점")
+                c3.metric("예상 시민 행복", f"{score_happy:+d}점")
                 
                 st.subheader("🕵️ AI 분석 코멘트")
-                if score_safety > 10:
-                    st.info("이 정책은 **마을의 안전**을 크게 지켜줄 것 같아요!")
-                elif score_eco > 10:
-                    st.info("이 정책은 **깨끗한 환경**을 만드는 데 아주 좋군요!")
-                else:
-                    st.info("참신한 아이디어네요! 예산이 얼마나 들지도 한번 고민해보세요.")
+                st.info(comment)
 
 
 # -----------------------------------------------------------------------------------------
