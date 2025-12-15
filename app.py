@@ -24,8 +24,14 @@ def get_ai_response(prompt):
 
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 시도할 모델 목록
-    candidate_models = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro', 'gemini-1.0-pro']
+    # 시도할 모델 목록 (사용 가능한 모델 우선)
+    candidate_models = [
+        'gemini-2.5-flash', 
+        'gemini-2.0-flash', 
+        'gemini-2.5-pro', 
+        'gemini-1.5-flash', 
+        'gemini-pro'
+    ]
     
     for model_name in candidate_models:
         try:
