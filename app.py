@@ -11,7 +11,7 @@ import google.generativeai as genai
 try:
     if "GEMINI_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         AI_AVAILABLE = True
     else:
         AI_AVAILABLE = False
