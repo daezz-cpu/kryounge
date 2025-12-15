@@ -349,7 +349,7 @@ with tab1:
                         response = model.generate_content(prompt)
                         bot_reply = response.text
                     except Exception as e:
-                        bot_reply = "시장님, 제 목소리가 잘 안 들리나요? (AI 오류)"
+                        bot_reply = f"시장님, AI 연결에 문제가 생겼어요 ㅠㅠ\n(에러 내용: {e})"
             else:
                 # Fallback
                 bot_reply = "시장님, 정말 해결해 주실 거죠? (AI 키를 확인해주세요)"
@@ -411,9 +411,9 @@ with tab2:
                             if "코멘트:" in line: comment = line.split(":")[1].strip()
                         
                     except Exception as e:
-                         st.error("AI가 피곤해서 잠들었나봐요. 다시 시도해주세요.")
+                         st.error(f"AI 분석 중 오류가 발생했습니다: {e}")
                          score_safety, score_eco, score_happy = 0, 0, 0
-                         comment = f"오류 발생: {e}"
+                         comment = "죄송해요. 오류 때문에 분석을 못했어요."
                 else:
                     # Fallback Logic
                     st.warning("AI 키가 설정되지 않았습니다. 기본 로직으로 분석합니다.")
