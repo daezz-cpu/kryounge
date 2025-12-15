@@ -66,6 +66,52 @@ def analyze_persona_from_title(title):
     if "Safety" in category or "안전" in category: return "경찰관"
     return "마을 주민" # 기본값
 
+def summarize_interview(chat_history):
+    """
+    이전 인터뷰 내용을 요약합니다.
+    """
+    if not chat_history:
+        return "진행된 인터뷰가 없습니다."
+        
+    conversation = "\n".join([f"{msg['role']}: {msg['content']}" for msg in chat_history])
+    prompt = (
+        f"Summarize the following interview conversation in 1-2 Korean sentences. "
+        f"Focus on the core problem and the resident's complaint.\n\n"
+        f"{conversation}"
+    )
+    return get_ai_response(prompt)
+
+def evaluate_policy_with_ai(idea, problem_context):
+    """
+    정책 아이디어를 AI가 평가합니다 (현실성, 효율성, 창의성).
+    점수(0-100)와 피드백을 반환합니다.
+    """
+    prompt = (
+        f"Context: {problem_context}\n"
+        f"Policy Idea: {idea}\n\n"
+        f"Evaluate this policy idea based on Reality, Efficiency, and Creativity. "
+        f"Return the response in the following format ONLY:\n"
+        f"SCORE: [0-100 integer]\n"
+        f"FEEDBACK: [1 sentence friendly feedback in Korean]"
+    )
+    response = get_ai_response(prompt)
+    
+    # 파싱 로직 (기본값 설정)
+    score = 50
+    feedback = "아이디어가 접수되었습니다."
+    
+    try:
+        lines = response.strip().split('\n')
+        for line in lines:
+            if "SCORE:" in line:
+                score = int(line.replace("SCORE:", "").strip())
+            if "FEEDBACK:" in line:
+                feedback = line.replace("FEEDBACK:", "").strip()
+    except:
+        pass
+        
+    return score, feedback
+
 # -----------------------------------------------------------------------------------------
 # [Helper Functions] 공통 함수 & 세션 초기화
 # -----------------------------------------------------------------------------------------
@@ -95,6 +141,10 @@ def init_game():
         st.session_state.news_title = ""
     if 'news_category' not in st.session_state:
         st.session_state.news_category = "교통"
+    
+    # Tab 2 Summary Cache
+    if 'interview_summary' not in st.session_state:
+        st.session_state.interview_summary = ""
         
     # 4. 챗봇 상태 (AI 재연동)
     if 'chat_history' not in st.session_state:
@@ -114,6 +164,7 @@ def reset_game():
     # Chat reset
     st.session_state.chat_history = []
     st.session_state.current_persona = None
+    st.session_state.interview_summary = ""
 
 # 문제 데이터 (ID, 제목, 설명, 선택지)
 problems = [
@@ -303,6 +354,8 @@ with tab1:
                 st.session_state.step1_status = True
                 st.balloons()
                 st.success("취재비 50코인을 받았습니다! (정책 연구소로 이동하세요)")
+                time.sleep(1) # 풍선 보여줄 시간
+                st.rerun() # [UX Fix] Update Sidebar Immediately
             else:
                 st.info("이미 예산을 수령했습니다.")
     else:
@@ -315,35 +368,52 @@ with tab2:
     st.header("💡 정책 아이디어 연구소")
     st.write("해결책을 제안하고 예산을 확보하세요!")
     
+    # 1. Show Context (Step 1 Info)
+    if st.session_state.news_title:
+        st.success(f"📌 해결해야 할 문제: **{st.session_state.news_title}**")
+        
+        # Generate Summary if needed
+        if not st.session_state.interview_summary and st.session_state.chat_history:
+            with st.spinner("AI가 지난 인터뷰 내용을 요약하고 있습니다..."):
+                st.session_state.interview_summary = summarize_interview(st.session_state.chat_history)
+        
+        if st.session_state.interview_summary:
+            st.info(f"💬 주민 인터뷰 요약: {st.session_state.interview_summary}")
+    else:
+        st.warning("1단계 뉴스룸을 먼저 완료하면, 더 정확한 정책 심사를 받을 수 있어요!")
+    
     idea_in = st.text_area("나만의 아이디어를 적어주세요. (구체적일수록 예산이 많아요!)", height=100)
     
     if st.button("🤖 AI 심사 받기"):
         if not st.session_state.step2_status:
-            score_acc = 40
-            tier = "C"
             
-            # Keywords
-            tier_a = ['캠페인', '홍보', '포스터', '교육', '약속', '규칙', '지킴이']
-            tier_b = ['설치', '건설', '만들', 'CCTV', '주차장', '가로등', '구매']
-            
-            if any(k in idea_in for k in tier_a):
-                score_acc = 100 # Increased Reward
-                tier = "A"
-                msg = "🌟 [최우수 정책] 주민들의 마음을 움직이는 멋진 생각이네요! (저비용 고효율)"
-            elif any(k in idea_in for k in tier_b):
-                score_acc = 70 # Increased Reward
-                tier = "B"
-                msg = "👍 [우수 정책] 튼튼한 시설이 생기면 정말 좋겠네요! (고비용 고효율)"
-            else:
-                score_acc = 40 # Increased Reward
-                msg = "🤔 [노력 정책] 조금 더 구체적인 해결책을 고민해볼까요?"
+            # AI Evaluation
+            with st.spinner("AI 심사위원이 정책을 분석 중입니다..."):
+                problem_ctx = f"Problem: {st.session_state.news_title}, Interview Summary: {st.session_state.interview_summary}"
+                score, feedback = evaluate_policy_with_ai(idea_in, problem_ctx)
+                
+                # Tier Logic
+                if score >= 80:
+                    score_acc = 100
+                    tier = "A"
+                    badge = "🌟 [최우수 정책]"
+                elif score >= 50:
+                    score_acc = 70
+                    tier = "B"
+                    badge = "👍 [우수 정책]"
+                else:
+                    score_acc = 40
+                    tier = "C"
+                    badge = "🤔 [노력 정책]"
 
             st.session_state.budget += score_acc
             st.session_state.step2_status = True
             
-            st.info(f"심사 결과: {msg}")
+            st.info(f"심사 결과 ({score}점): {badge}\nAI 피드백: {feedback}")
             st.metric("확보한 예산", f"+{score_acc} 코인")
             st.balloons()
+            time.sleep(1)
+            st.rerun() # [UX Fix] Update Sidebar Immediately
         else:
             st.warning("이미 정책 지원금을 받았습니다. 3단계로 이동하세요!")
 
