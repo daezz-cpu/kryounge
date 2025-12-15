@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import random
 import time
 import google.generativeai as genai
 
@@ -13,6 +12,55 @@ import google.generativeai as genai
 # [Setup] 페이지 설정
 # -----------------------------------------------------------------------------------------
 st.set_page_config(page_title="현명한 꼬마 시장님", layout="wide", page_icon="🏙️")
+
+# -----------------------------------------------------------------------------------------
+# [AI Helper] Gemini AI 설정 및 오류 처리
+# -----------------------------------------------------------------------------------------
+def get_ai_response(prompt):
+    """
+    Gemini AI에게 응답을 요청합니다.
+    404 에러 등 모델 문제 발생 시 대체 모델을 시도하거나 규칙 기반 응답을 반환합니다.
+    """
+    if "GEMINI_API_KEY" not in st.secrets:
+        return "🔑 API 키가 설정되지 않았어요."
+
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    
+    # 1순위: 1.5-flash
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        # 1순위 실패 시 로그 (디버깅용)
+        # print(f"Flash model failed: {e}")
+        pass
+        
+    # 2순위: pro
+    try:
+        model = genai.GenerativeModel('gemini-pro')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"🤖 AI 연결에 문제가 생겼어요. (오류 메시지: {e})\n잠시 후 다시 시도해보거나, 인터넷 연결을 확인해주세요."
+
+def analyze_persona_from_title(title):
+    """
+    기사 제목을 분석하여 적절한 페르소나를 추천합니다.
+    """
+    prompt = (
+        f"Analyze the following news title and categorize it into one of these categories: "
+        f"['Traffic', 'Environment', 'Safety', 'Economy', 'Other']. "
+        f"Return ONLY the category name.\n\n"
+        f"News Title: {title}"
+    )
+    category = get_ai_response(prompt).strip().replace("'", "").replace('"', "")
+    
+    # 매핑 로직
+    if "Traffic" in category or "교통" in category: return "등굣길 아이"
+    if "Environment" in category or "환경" in category: return "청소부 아저씨"
+    if "Safety" in category or "안전" in category: return "경찰관"
+    return "마을 주민" # 기본값
 
 # -----------------------------------------------------------------------------------------
 # [Helper Functions] 공통 함수 & 세션 초기화
@@ -38,11 +86,17 @@ def init_game():
     if 'game_over' not in st.session_state:
         st.session_state.game_over = False
         
-    # 3. 임시 UI 상태
+    # 3. 임시 UI 상태 (Tab 1)
     if 'news_title' not in st.session_state:
         st.session_state.news_title = ""
     if 'news_category' not in st.session_state:
         st.session_state.news_category = "교통"
+        
+    # 4. 챗봇 상태 (AI 재연동)
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if 'current_persona' not in st.session_state:
+        st.session_state.current_persona = None
 
 def reset_game():
     st.session_state.budget = 0
@@ -53,6 +107,9 @@ def reset_game():
     st.session_state.solved_problems = []
     st.session_state.logs = []
     st.session_state.game_over = False
+    # Chat reset
+    st.session_state.chat_history = []
+    st.session_state.current_persona = None
 
 # 문제 데이터 (ID, 제목, 설명, 선택지)
 problems = [
@@ -144,59 +201,104 @@ with tab1:
     
     # Step 1-1. Search
     st.subheader("Step 1. 리얼 월드 탐색")
-    st.info("🕵️‍♂️ 먼저 우리 지역의 뉴스를 찾아보고 오세요!")
+    
+    # Activity Description
+    st.info("💡 활동 안내: 검색 포털에 우리 지역의 이름이나, 지역에서 생긴 다양한 문제들을 검색해보세요!")
     
     col_link, col_input = st.columns([1, 2])
     with col_link:
         st.write("")
-        st.link_button("🔍 네이버에서 검색하기", "https://search.naver.com/search.naver?query=우리동네+문제점")
+        # Naver Main Link
+        st.link_button("🔍 네이버에서 검색하기", "https://www.naver.com")
         
     with col_input:
         title_in = st.text_input("기사 제목을 입력하세요", value=st.session_state.news_title)
+        # Selectbox is kept for manual override, but AI will suggest/set persona
         cat_in = st.selectbox("어떤 분야인가요?", ["교통", "환경", "안전", "기타"], index=["교통", "환경", "안전", "기타"].index(st.session_state.news_category))
         
         if st.button("📝 기사 등록"):
             if len(title_in) > 1:
                 st.session_state.news_title = title_in
                 st.session_state.news_category = cat_in
-                st.success("기사가 등록되었습니다! 아래 인터뷰를 진행하세요.")
+                
+                # AI Auto-Analysis for Persona
+                with st.spinner("AI가 기사 내용을 분석하여 인터뷰 대상을 찾고 있습니다..."):
+                     recommended_persona = analyze_persona_from_title(title_in)
+                     st.session_state.current_persona = recommended_persona
+                     st.session_state.chat_history = [] # Reset chat
+                     st.toast(f"AI 추천: 이 뉴스는 '{recommended_persona}'와 대화하는 것이 좋겠어요!", icon="🤖")
+
+                st.success("기사가 등록되었습니다! 아래 주민 인터뷰를 진행하세요.")
             else:
                 st.warning("제목을 입력해주세요.")
                 
     st.divider()
     
-    # Step 1-2. Chatbot
+    # Step 1-2. Chatbot with AI & Persona Switching
     st.subheader("Step 2. 가상 주민 인터뷰")
+    
     if st.session_state.news_title:
-        # 캐릭터 설정
-        personas = {
-            "교통": {"name": "🎒 등굣길 아이", "msg": "시장님! 차들이 너무 쌩쌩 달려서 무서워요."},
-            "환경": {"name": "🧹 청소부 아저씨", "msg": "쓰레기가 너무 많아서 치워도 끝이 없어요."},
-            "안전": {"name": "👮 경찰관", "msg": "어두운 골목길에서 사고가 자주 납니다."}
-        }
-        persona = personas.get(st.session_state.news_category, {"name": "🙋 민원인", "msg": "우리 동네 문제를 해결해주세요!"})
+        st.write("누구와 인터뷰할까요? 인물을 선택하면 새로운 대화가 시작됩니다.")
         
-        st.chat_message("assistant", avatar="👤").write(f"**{persona['name']}**: {persona['msg']}")
+        # Persona Selection Buttons
+        col_p1, col_p2, col_p3, col_p4 = st.columns(4)
         
-        user_input = st.text_input("주민에게 건넬 위로의 말을 적어주세요.", key="chat_tab1")
-        if user_input:
-            reply = "시장님... 제발 저희 이야기를 들어주세요."
-            if any(k in user_input for k in ["안녕", "반가", "하이"]):
-                reply = "네 안녕하세요 시장님! 바쁘신데 와주셔서 감사합니다."
-            elif any(k in user_input for k in ["왜", "이유", "원인", "뭐"]):
-                reply = f"그게요, '{st.session_state.news_title}' 문제 때문에 다들 난리도 아니에요."
-            elif any(k in user_input for k in ["해결", "약속", "도와", "고쳐"]):
-                reply = "정말인가요? 시장님만 믿겠습니다! 꼭 해결해주셔야 해요!"
+        def set_persona(p_name):
+            st.session_state.current_persona = p_name
+            st.session_state.chat_history = [] 
+        
+        with col_p1:
+            if st.button("🎒 등굣길 아이", use_container_width=True): set_persona("등굣길 아이")
+        with col_p2:
+            if st.button("🧹 청소부 아저씨", use_container_width=True): set_persona("청소부 아저씨")
+        with col_p3:
+            if st.button("👮 경찰관", use_container_width=True): set_persona("경찰관")
+        with col_p4:
+            if st.button("🙋 마을 주민", use_container_width=True): set_persona("마을 주민")
             
-            st.chat_message("user").write(user_input)
-            st.chat_message("assistant", avatar="👤").write(reply)
+        current_p = st.session_state.current_persona
+        
+        if current_p:
+            st.markdown(f"### 💬 지금 **'{current_p}'**님과 인터뷰 중입니다.")
             
+            # Display Chat History
+            for message in st.session_state.chat_history:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+            
+            # Chat Input
+            if prompt := st.chat_input("질문을 입력하세요..."):
+                # 1. User Message
+                st.session_state.chat_history.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                
+                # 2. AI Message logic
+                with st.chat_message("assistant"):
+                    with st.spinner(f"{current_p}님이 생각 중입니다..."):
+                        news_context = f"뉴스 제목: {st.session_state.news_title}, 분야: {st.session_state.news_category}"
+                        system_prompt = (
+                            f"당신은 '{current_p}'입니다. 우리 동네에 살고 있으며, 현재 '{news_context}' 문제로 인해 겪고 있는 어려움이나 생각을 말해주세요. "
+                            f"사용자는 '꼬마 시장'입니다. 초등학생에게 말하듯이 친근하고, '{current_p}'의 말투(참고: 아이는 존댓말/반말 섞기, 경찰은 듬직하게, 청소부는 구수하게)를 써주세요. "
+                            f" 답변은 3문장 이내로 짧게 해주세요."
+                            f"\n사용자 메시지: {prompt}"
+                        )
+                        
+                        ai_reply = get_ai_response(system_prompt)
+                        st.markdown(ai_reply)
+                        
+                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
+        else:
+             st.info("👆 위 버튼을 눌러 인터뷰하고 싶은 주민을 선택해주세요!")
+
+        st.divider()
+        # Increased Reward: 50 Coins
         if st.button("✅ 취재 완료 (코인 받기)"):
             if not st.session_state.step1_status:
-                st.session_state.budget += 40
+                st.session_state.budget += 50
                 st.session_state.step1_status = True
                 st.balloons()
-                st.success("취재비 40코인을 받았습니다! (정책 연구소로 이동하세요)")
+                st.success("취재비 50코인을 받았습니다! (정책 연구소로 이동하세요)")
             else:
                 st.info("이미 예산을 수령했습니다.")
     else:
@@ -213,7 +315,7 @@ with tab2:
     
     if st.button("🤖 AI 심사 받기"):
         if not st.session_state.step2_status:
-            score_acc = 20
+            score_acc = 40
             tier = "C"
             
             # Keywords
@@ -221,14 +323,15 @@ with tab2:
             tier_b = ['설치', '건설', '만들', 'CCTV', '주차장', '가로등', '구매']
             
             if any(k in idea_in for k in tier_a):
-                score_acc = 60
+                score_acc = 100 # Increased Reward
                 tier = "A"
-                msg = "🌟 [최우수 정책] 사람들의 생각을 바꾸는 멋진 아이디어예요!"
+                msg = "🌟 [최우수 정책] 주민들의 마음을 움직이는 멋진 생각이네요! (저비용 고효율)"
             elif any(k in idea_in for k in tier_b):
-                score_acc = 40
+                score_acc = 70 # Increased Reward
                 tier = "B"
-                msg = "👍 [우수 정책] 필요한 시설을 만드는 좋은 방법이네요."
+                msg = "👍 [우수 정책] 튼튼한 시설이 생기면 정말 좋겠네요! (고비용 고효율)"
             else:
+                score_acc = 40 # Increased Reward
                 msg = "🤔 [노력 정책] 조금 더 구체적인 해결책을 고민해볼까요?"
 
             st.session_state.budget += score_acc
