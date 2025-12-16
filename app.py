@@ -573,10 +573,10 @@ with tab3:
                         for k, v in prob['A']['effect'].items():
                             st.session_state.stats[k] = min(100, max(0, st.session_state.stats[k] + v))
                         
-                        st.session_state.logs.append(f"A 선택: {prob['msg']}")
+                        st.session_state.logs.append(f"A 선택: {prob['A']['msg']}")
                         st.session_state.solved_problems.append(prob['id'])
                         st.session_state.turns -= 1
-                        st.success(prob['msg'])
+                        st.success(prob['A']['msg'])
                         if st.session_state.turns == 0:
                             st.session_state.game_over = True
                         st.rerun()
@@ -592,10 +592,10 @@ with tab3:
                         for k, v in prob['B']['effect'].items():
                             st.session_state.stats[k] = min(100, max(0, st.session_state.stats[k] + v))
                         
-                        st.session_state.logs.append(f"B 선택: {prob['msg']}")
+                        st.session_state.logs.append(f"B 선택: {prob['B']['msg']}")
                         st.session_state.solved_problems.append(prob['id'])
                         st.session_state.turns -= 1
-                        st.success(prob['msg'])
+                        st.success(prob['B']['msg'])
                         if st.session_state.turns == 0:
                             st.session_state.game_over = True
                         st.rerun()
