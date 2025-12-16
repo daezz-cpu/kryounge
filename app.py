@@ -17,39 +17,44 @@ st.set_page_config(page_title="현명한 꼬마 시장님", layout="wide", page_
 def get_ai_response(prompt):
     """
     Gemini AI에게 응답을 요청합니다.
-    실패 시 사용 가능한 모델 리스트를 확인하여 에러 메시지에 표시합니다.
+    동적으로 사용 가능한 모델을 탐색하여 연결을 시도합니다.
     """
     if "GEMINI_API_KEY" not in st.secrets:
         return "🔑 API 키가 설정되지 않았어요."
 
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
-    # 시도할 모델 목록 (사용 가능한 모델 우선)
-    candidate_models = [
-        'models/gemini-2.5-flash', 
-        'models/gemini-2.5-pro',
-        'models/gemini-2.0-flash',
-        'models/gemini-2.0-flash-lite-preview-02-05',
-        'models/gemini-flash-latest',
-        'models/gemini-pro-latest',
-        'gemini-2.5-flash', 
-        'gemini-2.0-flash'
-    ]
-    
-    for model_name in candidate_models:
-        try:
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
-            return response.text
-        except Exception:
-            continue
-            
-    # 모든 모델 실패 시 디버깅 정보 출력
+    last_error = ""
+    available_models = []
+
     try:
+        # 1. 사용 가능한 모델 목록 가져오기
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        return f"🤖 AI 연결 실패. (사용 가능한 모델: {available_models})\nAPI 키 권한이나 지역 설정을 확인해주세요."
+        
+        # 2. 우선순위 정렬 (Flash 모델 우선)
+        # models/gemini-2.5-flash 같은 최신 모델을 앞세움
+        sorted_models = sorted(available_models, key=lambda x: (
+            0 if 'gemini-2.5-flash' in x else 
+            1 if 'gemini-2.0-flash' in x else 
+            2 if 'flash' in x else 
+            3
+        ))
+        
+        # 3. 순차적 시도
+        for model_name in sorted_models:
+            try:
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(prompt)
+                return response.text
+            except Exception as e:
+                last_error = f"{model_name}: {str(e)}"
+                continue
+                
     except Exception as e:
-        return f"🤖 AI 치명적 오류: 모델 목록을 가져올 수 없습니다. ({e})\nAPI 키가 올바른지 확인해주세요."
+        return f"🤖 AI 모델 목록을 가져오는 중 오류 발생: {str(e)}"
+
+    # 모든 시도 실패 시
+    return f"🤖 AI 연결 실패.\n마지막 오류: {last_error}\n(사용 가능한 모델: {len(available_models)}개 발견됨)"
 
 def analyze_persona_from_title(title):
     """
