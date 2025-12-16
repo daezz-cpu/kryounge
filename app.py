@@ -130,6 +130,24 @@ def generate_mayoral_report(stats, budget):
     )
     return get_ai_response(prompt)
 
+def generate_resident_reactions(problem_title, choice_label, choice_effect, choice_msg):
+    """
+    선택에 따른 지역 주민들의 반응을 생성합니다.
+    """
+    prompt = (
+        f"마을 문제: {problem_title}\n"
+        f"시장님이 선택한 정책: {choice_label}\n"
+        f"정책 효과: {choice_effect}\n"
+        f"결과 메시지: {choice_msg}\n\n"
+        f"위 정책에 대해 서로 다른 입장의 마을 주민 2명의 짧은 반응을 작성해주세요.\n"
+        f"형식:\n"
+        f"👦 [주민1 역할]: (한 문장 반응)\n"
+        f"👵 [주민2 역할]: (한 문장 반응)\n\n"
+        f"한국어로, 초등학생도 이해할 수 있게 친근하고 쉽게 작성하세요.\n"
+        f"반응은 긍정적일 수도, 부정적일 수도 있습니다."
+    )
+    return get_ai_response(prompt)
+
 def check_improvement(original, feedback, new_idea):
     """
     보완된 아이디어가 피드백을 잘 반영했는지 확인합니다.
@@ -197,6 +215,12 @@ def init_game():
     # 5. Tab 3 Final Report
     if 'final_report' not in st.session_state:
         st.session_state.final_report = ""
+    
+    # 6. Tab 3 Resident Reactions
+    if 'resident_reaction' not in st.session_state:
+        st.session_state.resident_reaction = None
+    if 'last_choice_msg' not in st.session_state:
+        st.session_state.last_choice_msg = None
 
 def reset_game():
     st.session_state.budget = 0
@@ -214,6 +238,8 @@ def reset_game():
     st.session_state.policy_eval_result = {}
     st.session_state.bonus_claimed = False
     st.session_state.final_report = ""
+    st.session_state.resident_reaction = None
+    st.session_state.last_choice_msg = None
 
 # 문제 데이터 (ID, 제목, 설명, 선택지)
 problems = [
@@ -555,6 +581,19 @@ with tab3:
     else:
         st.write(f"남은 턴: {st.session_state.turns}")
         
+        # Display previous choice reaction if exists
+        if st.session_state.resident_reaction:
+            st.divider()
+            st.success(f"📢 정책 결과: {st.session_state.last_choice_msg}")
+            st.markdown("### 🗣️ 주민들의 반응")
+            st.info(st.session_state.resident_reaction)
+            
+            if st.button("➡️ 다음 문제로", key="continue_btn"):
+                st.session_state.resident_reaction = None
+                st.session_state.last_choice_msg = None
+                st.rerun()
+            st.stop()  # Stop here until user clicks continue
+        
         # 문제 뽑기 (순서대로)
         current_idx = 5 - st.session_state.turns
         if current_idx < len(problems):
@@ -575,8 +614,19 @@ with tab3:
                         
                         st.session_state.logs.append(f"A 선택: {prob['A']['msg']}")
                         st.session_state.solved_problems.append(prob['id'])
+                        st.session_state.last_choice_msg = prob['A']['msg']
+                        
+                        # Generate resident reactions
+                        with st.spinner("주민들의 반응을 확인하는 중..."):
+                            reaction = generate_resident_reactions(
+                                prob['title'],
+                                prob['A']['label'],
+                                str(prob['A']['effect']),
+                                prob['A']['msg']
+                            )
+                            st.session_state.resident_reaction = reaction
+                        
                         st.session_state.turns -= 1
-                        st.success(prob['A']['msg'])
                         if st.session_state.turns == 0:
                             st.session_state.game_over = True
                         st.rerun()
@@ -594,8 +644,19 @@ with tab3:
                         
                         st.session_state.logs.append(f"B 선택: {prob['B']['msg']}")
                         st.session_state.solved_problems.append(prob['id'])
+                        st.session_state.last_choice_msg = prob['B']['msg']
+                        
+                        # Generate resident reactions
+                        with st.spinner("주민들의 반응을 확인하는 중..."):
+                            reaction = generate_resident_reactions(
+                                prob['title'],
+                                prob['B']['label'],
+                                str(prob['B']['effect']),
+                                prob['B']['msg']
+                            )
+                            st.session_state.resident_reaction = reaction
+                        
                         st.session_state.turns -= 1
-                        st.success(prob['B']['msg'])
                         if st.session_state.turns == 0:
                             st.session_state.game_over = True
                         st.rerun()
