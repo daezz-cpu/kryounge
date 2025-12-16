@@ -550,7 +550,25 @@ with tab2:
 with tab3:
     st.header("🏛️ 꼬마 시장님 시뮬레이션")
     
-    # Intro
+    # Check prerequisites - must complete Steps 1 and 2 first
+    if not st.session_state.step1_status or not st.session_state.step2_status:
+        st.warning("⚠️ 1단계와 2단계를 먼저 완료해야 게임에 도전할 수 있어요!")
+        
+        # Show which steps are incomplete
+        if not st.session_state.step1_status:
+            st.error("❌ 1단계 '뉴스룸'을 아직 완료하지 않았어요. 취재를 완료하고 코인을 받으세요!")
+        else:
+            st.success("✅ 1단계 '뉴스룸' 완료!")
+            
+        if not st.session_state.step2_status:
+            st.error("❌ 2단계 '정책 연구소'를 아직 완료하지 않았어요. 정책 아이디어를 제출하고 심사를 받으세요!")
+        else:
+            st.success("✅ 2단계 '정책 연구소' 완료!")
+        
+        st.info("💡 팁: 위 탭을 클릭하여 이전 단계로 이동할 수 있어요!")
+        st.stop()  # Stop here - don't show the game
+    
+    # Intro (only shown after completing steps 1 & 2)
     st.info("""
     **📖 활동 안내**
     1, 2단계에서 모은 예산을 활용하여 발생한 5가지 마을 문제를 해결해보세요!
