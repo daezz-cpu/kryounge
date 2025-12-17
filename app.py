@@ -128,6 +128,25 @@ def evaluate_policy_with_ai(idea, problem_context):
         
     return score, good, improve
 
+def check_improvement(original, feedback, new_idea):
+    """피드백 반영 여부 확인"""
+    # 목적: 학생이 AI의 피드백을 무시하지 않고, 수정된 아이디어에 반영했는지 AI가 판단합니다.
+    # 결과: 피드백 반영이 확인되면 'YES', 아니면 'NO'를 반환하여 보너스 점수 지급 여부를 결정합니다.
+    prompt = (
+        f"Original Idea: {original}\n"
+        f"Feedback to improve: {feedback}\n"
+        f"New Idea: {new_idea}\n\n"
+        f"SAFETY CHECK: If 'New Idea' contains profanity, violence, or inappropriate content, return 'NO' immediately.\n"
+        f"Determine if the student has made an effort to improve the idea based on the feedback.\n"
+        f"Criteria for 'YES':\n"
+        f"1. Does the new idea include at least one KEYWORD from the feedback?\n"
+        f"2. Is there ANY sign of effort to address the feedback?\n"
+        f"If either of these is true, return 'YES'.\n"
+        f"Return ONLY 'YES' or 'NO'."
+    )
+    res = get_ai_response(prompt).strip().upper()
+    return "YES" in res
+
 def generate_mayoral_report(stats, budget):
     """최종 리포트 생성"""
     # 목적: 게임 종료 후, 플레이어의 활동 결과(지표, 남은 예산)를 바탕으로 격려와 평가가 담긴 성적표를 작성합니다.
@@ -163,24 +182,7 @@ def generate_resident_reactions(problem_title, choice_label, choice_effect, choi
     )
     return get_ai_response(prompt)
 
-def check_improvement(original, feedback, new_idea):
-    """피드백 반영 여부 확인"""
-    # 목적: 학생이 AI의 피드백을 무시하지 않고, 수정된 아이디어에 반영했는지 AI가 판단합니다.
-    # 결과: 피드백 반영이 확인되면 'YES', 아니면 'NO'를 반환하여 보너스 점수 지급 여부를 결정합니다.
-    prompt = (
-        f"Original Idea: {original}\n"
-        f"Feedback to improve: {feedback}\n"
-        f"New Idea: {new_idea}\n\n"
-        f"SAFETY CHECK: If 'New Idea' contains profanity, violence, or inappropriate content, return 'NO' immediately.\n"
-        f"Determine if the student has made an effort to improve the idea based on the feedback.\n"
-        f"Criteria for 'YES':\n"
-        f"1. Does the new idea include at least one KEYWORD from the feedback?\n"
-        f"2. Is there ANY sign of effort to address the feedback?\n"
-        f"If either of these is true, return 'YES'.\n"
-        f"Return ONLY 'YES' or 'NO'."
-    )
-    res = get_ai_response(prompt).strip().upper()
-    return "YES" in res
+
 
 # -----------------------------------------------------------------------------------------
 # [Helper Functions] 세션 상태 초기화
