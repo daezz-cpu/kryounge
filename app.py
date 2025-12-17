@@ -283,234 +283,33 @@ problems = [
         "A": {"label": "불법주차 단속 카메라 설치 (20코인)", "cost": 20, "effect": {"🛡️안전": 25, "💰경제": -5, "😊행복": -5}, "msg": "불법 주차는 줄었지만, 잠시 댈 곳도 없다고 상인들이 화났어요!"},
         "B": {"label": "공영 주차장 건설 (45코인)", "cost": 45, "effect": {"💰경제": 15, "😊행복": 10}, "msg": "주차는 편해졌지만 예산이 많이 들었어요."}
     },
-    # ... (중략) ...
+    # ... (나머지 문제 데이터 생략 없이 원본 유지) ...
     {
-        "id": 7, "title": "버스 배차 불편", "image": "assets/bus_stop.jpg",
-        "desc": "버스가 너무 안 와서 학교 가기가 힘들어요.",
-        "A": {"label": "버스 증차 (40코인)", "cost": 40, "effect": {"😊행복": 25, "💰경제": 5}, "msg": "편해졌지만 유지비가 엄청나요!"},
-        "B": {"label": "행복 택시 쿠폰 (10코인)", "cost": 10, "effect": {"😊행복": 10}, "msg": "급한 불은 껐지만 근본 해결책은 아니에요."}
-    }
-]
-
-# -----------------------------------------------------------------------------------------
-# [App Start] 메인 애플리케이션 시작
-# -----------------------------------------------------------------------------------------
-# 앱이 시작되면 가장 먼저 세션 상태를 초기화합니다.
-init_game()
-
-# [Sidebar] 왼쪽 사이드바 구성
-# 목적: 사용자가 현재 예산, 진행 단계, 도시의 상태(4가지 지표)를 언제든지 확인할 수 있게 고정된 영역을 만듭니다.
-with st.sidebar:
-    st.title(f"💰 현재 예산: {st.session_state.budget} 코인")
-    st.divider()
-    
-    st.subheader("✅ 진행 상황")
-    chk1 = "✅" if st.session_state.step1_status else "⬜"
-    chk2 = "✅" if st.session_state.step2_status else "⬜"
-    chk3 = "✅" if st.session_state.solved_problems else "⬜"
-    
-    st.write(f"{chk1} 1단계: 뉴스룸")
-    st.write(f"{chk2} 2단계: 정책 연구소")
-    st.write(f"{chk3} 3단계: 꼬마 시장님")
-    
-    st.divider()
-    st.subheader("📊 우리 마을 상태")
-    
-    # 목적: Plotly 라이브러리를 사용하여 도시 상태를 Radar Chart(방사형 차트)로 시각화합니다.
-    # 결과: 사용자가 숫자만 보는 것보다 '행복', '환경' 등 어떤 분야가 부족한지 도형의 찌그러짐을 통해 직관적으로 파악할 수 있습니다.
-    df_stats = pd.DataFrame(dict(
-        r=list(st.session_state.stats.values()),
-        theta=list(st.session_state.stats.keys())
-    ))
-    fig = px.line_polar(df_stats, r='r', theta='theta', line_close=True, range_r=[0, 100])
-    fig.update_traces(fill='toself')
-    st.plotly_chart(fig, use_container_width=True)
-    
-    st.caption("현재 마을 지표:")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.metric("😊행복", st.session_state.stats.get("😊행복", 50))
-        st.metric("💰경제", st.session_state.stats.get("💰경제", 50))
-    with c2:
-        st.metric("🌳환경", st.session_state.stats.get("🌳환경", 50))
-        st.metric("🛡️안전", st.session_state.stats.get("🛡️안전", 50))
-
-
-st.title("🏙️ 우리 지역 문제를 찾아 현명하게 해결해보자!")
-# 메인 화면을 3개의 탭으로 나누어 단계별 학습 활동을 구성합니다.
-tab1, tab2, tab3 = st.tabs(["📰 1단계: 뉴스룸", "💡 2단계: 정책 연구소", "🏛️ 3단계: 꼬마 시장님"])
-
-
-# -----------------------------------------------------------------------------------------
-# [Tab 1] 1단계: 뉴스룸 (문제 탐색 및 인터뷰)
-# -----------------------------------------------------------------------------------------
-with tab1:
-    st.header("📰 우리 동네에 무슨 일이?!")
-    
-    # [Step 1-1] 리얼 월드 탐색 (뉴스 검색 및 등록)
-    st.subheader("Step 1. 리얼 월드 탐색")
-    # ... (생략) ...
-    
-    with col_input:
-        # 사용자가 찾은 기사 제목과 분야를 입력받습니다.
-        title_in = st.text_input("기사 제목을 입력하세요", value=st.session_state.news_title)
-        cat_in = st.selectbox("어떤 분야인가요?", ["교통", "환경", "안전", "기타"])
-        
-        if st.button("📝 기사 등록"):
-            if len(title_in) > 1:
-                st.session_state.news_title = title_in
-                st.session_state.news_category = cat_in
-                
-                # 목적: 사용자가 입력한 제목을 바탕으로 AI가 적절한 인터뷰 대상(페르소나)을 자동으로 추천해줍니다.
-                # 결과: 사용자가 고민하지 않아도 문맥에 맞는 캐릭터(예: 스쿨존 문제 -> 아이)가 자동 선택되어 몰입감을 높입니다.
-                with st.spinner("AI가 기사 내용을 분석하여 인터뷰 대상을 찾고 있습니다..."):
-                      recommended_persona = analyze_persona_from_title(title_in)
-                      st.session_state.current_persona = recommended_persona
-                      st.session_state.chat_history = [] 
-                      st.toast(f"AI 추천: 이 뉴스는 '{recommended_persona}'와 대화하는 것이 좋겠어요!", icon="🤖")
-
-                st.success("기사가 등록되었습니다! 아래 주민 인터뷰를 진행하세요.")
-            # ... (생략) ...
-                
-    st.divider()
-    
-    # [Step 1-2] 가상 주민 인터뷰 (AI 챗봇)
-    st.subheader("Step 2. 가상 주민 인터뷰")
-    
-    if st.session_state.news_title:
-        # ... (생략) ...
-        
-        # 채팅 UI 표시
-        if current_p:
-            # ... (생략) ...
-            
-            # 사용자 입력 처리
-            if prompt := st.chat_input("질문을 입력하세요..."):
-                # ... (생략) ...
-                
-                # AI 응답 생성
-                with st.chat_message("assistant"):
-                    with st.spinner(f"{current_p}님이 생각 중입니다..."):
-                        # ... (생략) ...
-                        
-                        # AI에게 역할(페르소나)을 부여하고 상황에 맞는 답변을 요구합니다.
-                        # 대화의 맥락(history_text)을 함께 전송하여 이전 대화를 기억하게 만듭니다.
-                        system_prompt = (
-                            f"당신은 '{current_p}'입니다. 우리 동네에 살고 있으며, 현재 '{news_context}' 문제로 인해 겪고 있는 어려움이나 생각을 말해주세요.\n"
-                            # ... (프롬프트 내용 생략) ...
-                        )
-                        
-                        ai_reply = get_ai_response(system_prompt)
-                        st.markdown(ai_reply)
-                        
-                st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
-        # ... (생략) ...
-
-# -----------------------------------------------------------------------------------------
-# [Tab 2] 2단계: 정책 연구소 (아이디어 제안 및 AI 심사)
-# -----------------------------------------------------------------------------------------
-with tab2:
-    st.header("💡 정책 아이디어 연구소")
-    # ... (생략) ...
-    
-    # [AI 심사 요청]
-    if st.button("🤖 AI 심사 받기"):
-        if not st.session_state.step2_status:
-            
-            with st.spinner("AI 심사위원이 정책을 분석 중입니다..."):
-                problem_ctx = f"Problem: {st.session_state.news_title}, Category: {st.session_state.news_category}, Interview: {st.session_state.interview_summary}"
-                # 목적: 학생의 아이디어를 AI에게 전송하여 점수와 피드백을 받아옵니다.
-                score, good, improve = evaluate_policy_with_ai(idea_in, problem_ctx)
-                
-                # 결과 저장 및 등급 산정
-                st.session_state.policy_eval_result = {"score": score, "good": good, "improve": improve}
-                
-                # 점수에 따른 예산 지급 로직 (높은 점수일수록 더 많은 예산을 획득)
-                if score >= 80:
-                    score_acc = 100
-                    # ...
-                elif score >= 50:
-                    score_acc = 70
-                    # ...
-                else:
-                    score_acc = 40
-                    # ...
-
-            st.session_state.budget += score_acc
-            st.session_state.step2_status = True
-            st.balloons() # 목적: 성취감을 주기 위한 시각적 효과 (풍선 애니메이션)
-            # ... (생략) ...
-
-    # [심사 결과 표시 및 보완 미션]
-    if st.session_state.step2_status and st.session_state.policy_eval_result:
-        # ... (생략) ...
-        
-        # 보완할 점이 있다면 추가 미션(보너스 코인 기회)을 제공합니다.
-        if res['improve']:
-            st.warning(f"🔧 보완할 점: {res['improve']}")
-            
-            if not st.session_state.bonus_claimed:
-                # ... (생략) ...
-                
-                if st.button("✨ 보완 제출"):
-                    if len(refined_idea) > 5:
-                        with st.spinner("AI가 보완 여부를 확인 중입니다..."):
-                            # 목적: 단순히 글자만 쓴 게 아니라, 실제로 AI의 피드백을 반영했는지 검사하여 '의미 있는 학습'을 유도합니다.
-                            is_improved = check_improvement(idea_in, res['improve'], refined_idea)
-                            
-                            if is_improved:
-                                st.session_state.budget += 30
-                                st.session_state.bonus_claimed = True
-                                # ... (생략) ...
-                            else:
-                                st.error("피드백 내용이 충분히 반영되지 않은 것 같아요. 다시 한번 고민해보세요!")
-                    else:
-                        st.warning("내용을 조금 더 적어주세요.")
-
-# -----------------------------------------------------------------------------------------
-# [Tab 3] 3단계: 꼬마 시장님 (예산 운용 시뮬레이션 게임)
-# -----------------------------------------------------------------------------------------
-with tab3:
-    st.header("🏛️ 꼬마 시장님 시뮬레이션")
-    
-    # [접근 제어] 1, 2단계를 완료하지 않았다면 게임을 진행할 수 없습니다.
-    if not st.session_state.step1_status or not st.session_state.step2_status:
-        st.warning("⚠️ 1단계와 2단계를 먼저 완료해야 게임에 도전할 수 있어요!")
-        st.stop()  # 목적: 조건을 충족하지 못한 경우 코드를 여기서 중단시켜 아래 게임 화면이 보이지 않게 막습니다.
-    
-    # ... (생략) ...
-    
-    # [문제 제시] 현재 턴에 해당하는 문제를 가져와 화면에 표시합니다.
-    current_idx = 5 - st.session_state.turns
-    if current_idx < len(problems):
-        prob = problems[current_idx]
-        
-        st.subheader(f"문제 {current_idx + 1}: {prob['title']}")
-        
-        col1, col2 = st.columns(2)
-        # A안 선택 로직
-        with col1:
-            # ... (생략) ...
-            if st.button("선택 A 실행", key=f"btn_a_{current_idx}"):
-                # 목적: 현재 보유한 예산이 정책 비용보다 많은지 확인합니다.
-                if st.session_state.budget >= prob['A']['cost']:
-                    # 예산 차감 및 도시 지표 업데이트 (수치가 0~100 사이를 벗어나지 않도록 min/max 처리)
-                    st.session_state.budget -= prob['A']['cost']
-                    for k, v in prob['A']['effect'].items():
-                        st.session_state.stats[k] = min(100, max(0, st.session_state.stats[k] + v))
-                    
-                    st.session_state.logs.append(f"A 선택: {prob['A']['msg']}")
-                    st.session_state.solved_problems.append(prob['id'])
-                    
-                    # 선택 결과에 따른 AI 주민 반응 생성
-                    with st.spinner("주민들의 반응을 확인하는 중..."):
-                        reaction = generate_resident_reactions(...)
-                        st.session_state.resident_reaction = reaction
-                    
-                    st.session_state.turns -= 1
-                    # 턴 종료 여부 확인
-                    if st.session_state.turns == 0:
-                        st.session_state.game_over = True
-                    st.rerun()
-                else:
-                    st.error("예산이 부족해요!")
+        "id": 2, "title": "쓰레기 악취", "image": "assets/trash_pile.jpg",
+        "desc": "골목길에 쓰레기가 쌓여서 냄새가 심해요!",
+        "A": {"label": "분리수거장 설치 (10코인)", "cost": 10, "effect": {"🌳환경": 15, "😊행복": 5}, "msg": "깨끗해졌지만 주민들이 관리를 귀찮아해요."},
+        "B": {"label": "스마트 CCTV 설치 (30코인)", "cost": 30, "effect": {"🛡️안전": 10, "🌳환경": 20}, "msg": "쓰레기 무단 투기가 싹 사라졌어요!"}
+    },
+    {
+        "id": 3, "title": "낡은 놀이터", "image": "assets/old_playground.jpg",
+        "desc": "놀이터 기구가 낡아서 아이들이 놀 곳이 없어요.",
+        "A": {"label": "놀이기구 페인트칠 (10코인)", "cost": 10, "effect": {"😊행복": 10, "💰경제": 5}, "msg": "깔끔해졌지만, 새로운 놀이기구가 없어서 아쉬워해요."},
+        "B": {"label": "최신 테마 놀이터 조성 (50코인)", "cost": 50, "effect": {"😊행복": 30, "🌳환경": 10}, "msg": "아이들이 너무 좋아해요! 다른 동네에서도 놀러 와요."}
+    },
+    {
+        "id": 4, "title": "길고양이 갈등", "image": "assets/stray_cats.jpg",
+        "desc": "배고픈 고양이 울음소리 때문에 이웃 간 다툼이 있어요.",
+        "A": {"label": "고양이 급식소 (5코인)", "cost": 5, "effect": {"😊행복": 10, "🌳환경": -5}, "msg": "싸움은 줄었지만 고양이가 더 모였어요."},
+        "B": {"label": "마을 고양이 보호소 설치 (40코인)", "cost": 40, "effect": {"🌳환경": 20, "😊행복": 10}, "msg": "고양이들이 안전하게 보호받고, 주민 갈등도 사라졌어요!"}
+    },
+    {
+        "id": 5, "title": "어두운 밤길", "image": "assets/dark_street.jpg",
+        "desc": "가로등이 없어서 밤에 다니기가 너무 무서워요.",
+        "A": {"label": "강력 LED 설치 (15코인)", "cost": 15, "effect": {"🛡️안전": 20, "🌳환경": -5}, "msg": "밝아졌지만 빛 공해로 잠을 설친대요."},
+        "B": {"label": "자율 방범대 운영 (35코인)", "cost": 35, "effect": {"🛡️안전": 15, "💰경제": 10}, "msg": "일자리는 늘었지만 인건비가 계속 나가요."}
+    },
+    {
+        "id": 6, "title": "공장 매연", "image": "assets/factory_smoke.jpg",
+        "desc": "공장에서 나오는 연기 때문에 공기가 탁해요.",
+        "A": {"label": "친환경 필터 지원 (30코인)", "cost": 30, "effect": {"🌳환경": 25, "😊행복": 10}, "msg": "공기는 맑아졌지만 예산 출혈이 커요."},
+        "B": {"label": "공장 가동 제한 (0코인)", "cost": 0, "effect": {"💰경제": -20, "🌳환경": 15}, "msg": "공기는 좋아졌지만 공장 수익이 줄
