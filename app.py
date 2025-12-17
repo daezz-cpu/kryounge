@@ -71,7 +71,7 @@ def analyze_persona_from_title(title):
         f"Analyze the news title '{title}'. "
         f"Select the most relevant persona from this list: {persona_list}. "
         f"You MUST select one from the list. "
-        f"If the title is vague or you are unsure, default to '마을 주민'. "
+        f"If the title is vague, inappropriate, or contains profanity, default to '마을 주민'. "
         f"Return ONLY the persona name."
     )
     result = get_ai_response(prompt).strip().replace("'", "").replace('"', "")
@@ -95,6 +95,8 @@ def evaluate_policy_with_ai(idea, problem_context):
     prompt = (
         f"Context: {problem_context}\n"
         f"Student's Policy Idea: {idea}\n\n"
+        f"SAFETY CHECK: If the idea contains profanity, violence, self-harm, hate speech, or sexually explicit content, "
+        f"STOP evaluation immediately. Return SCORE: 0, and set 'ANALYSIS', 'GOOD', and 'IMPROVE' to '바르고 고운 말을 사용하여 다시 작성해주세요.' in Korean.\n\n"
         f"You are an AI policy evaluator for elementary school students. You MUST speak Korean ONLY.\n"
         f"Analyze the student's idea based on THREE criteria:\n"
         f"1. **WHAT** (25점): 어떤 정책인지 명확하게 설명했는가?\n"
@@ -115,6 +117,10 @@ def evaluate_policy_with_ai(idea, problem_context):
     score = 50
     good = "아이디어가 접수되었습니다."
     improve = None
+    
+    # Safety Guard: AI가 욕설/비속어 등을 감지하여 거부한 경우 0점 처리
+    if "바르고 고운 말" in response or "부적절" in response:
+        return 0, "부적절한 내용이 감지되었습니다.", "바르고 고운 말을 사용하여 다시 작성해주세요."
     
     try:
         lines = response.strip().split('\n')
@@ -183,6 +189,7 @@ def check_improvement(original, feedback, new_idea):
         f"Original Idea: {original}\n"
         f"Feedback to improve: {feedback}\n"
         f"New Idea: {new_idea}\n\n"
+        f"SAFETY CHECK: If 'New Idea' contains profanity, violence, or inappropriate content, return 'NO' immediately.\n"
         f"Determine if the student has made an effort to improve the idea based on the feedback.\n"
         f"Criteria for 'YES':\n"
         f"1. Does the new idea include at least one KEYWORD from the feedback?\n"
@@ -474,6 +481,7 @@ with tab1:
                         system_prompt = (
                             f"당신은 '{current_p}'입니다. 우리 동네에 살고 있으며, 현재 '{news_context}' 문제로 인해 겪고 있는 어려움이나 생각을 말해주세요.\n"
                             f"사용자는 '꼬마 시장'입니다. 꼬마 시장님을 대하듯 예의를 갖추어 반드시 '존댓말'을 사용하세요. (참고: 아이, 경찰, 청소부, 주민 모두 꼬마 시장님에게 공손하게 존댓말을 써야 합니다).\n"
+                            f"안전 지침: 만약 사용자가 욕설, 비속어, 폭력적인 언어를 사용하거나 부적절한 제안을 하면, 역할극을 잠시 멈추고 점잖게 '시장님, 우리 바르고 고운 말을 쓰기로 약속해요.'라고 타이르세요.\n"
                             f"이전 대화 맥락을 파악하고 자연스럽게 이어말하세요. 답변은 3문장 이내로 짧게 해주세요.\n\n"
                             f"--- 대화 내역 ---\n"
                             f"{history_text}\n"
