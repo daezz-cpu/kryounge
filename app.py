@@ -276,44 +276,44 @@ def reset_game():
 # 목적: 각 문제의 제목, 설명, 선택지(A/B)에 따른 비용과 도시 지표 변화량을 정의합니다.
 problems = [
     {
-        "id": 1, "title": "스쿨존 주차난", 
+        "id": 1, "title": "스쿨존 주차난", "image": "assets/school_zone.jpg",
         "desc": "학교 앞 스쿨존에 불법 주차된 차들이 너무 많아요. 아이들이 위험해요!",
         "A": {"label": "튼튼한 펜스 설치 (15코인)", "cost": 15, "effect": {"🛡️안전": 20, "💰경제": -5}, "msg": "안전해졌지만 상인들은 불만이에요."},
         "B": {"label": "공영 주차장 건설 (45코인)", "cost": 45, "effect": {"💰경제": 15, "😊행복": 10}, "msg": "주차는 편해졌지만 예산이 많이 들었어요."}
     },
     # ... (나머지 문제 데이터 생략, 구조 동일) ...
     {
-        "id": 2, "title": "쓰레기 악취", 
+        "id": 2, "title": "쓰레기 악취", "image": "assets/trash_pile.jpg",
         "desc": "골목길에 쓰레기가 쌓여서 냄새가 심해요!",
         "A": {"label": "분리수거장 설치 (10코인)", "cost": 10, "effect": {"🌳환경": 15, "😊행복": 5}, "msg": "깨끗해졌지만 주민들이 관리를 귀찮아해요."},
         "B": {"label": "스마트 CCTV 설치 (30코인)", "cost": 30, "effect": {"🛡️안전": 10, "🌳환경": 20}, "msg": "쓰레기 무단 투기가 싹 사라졌어요!"}
     },
     {
-        "id": 3, "title": "낡은 놀이터", 
+        "id": 3, "title": "낡은 놀이터", "image": "assets/old_playground.jpg",
         "desc": "놀이터 기구가 낡아서 아이들이 놀 곳이 없어요.",
         "A": {"label": "놀이기구 페인트칠 (10코인)", "cost": 10, "effect": {"😊행복": 10, "💰경제": 5}, "msg": "깔끔해졌지만, 새로운 놀이기구가 없어서 아쉬워해요."},
         "B": {"label": "최신 테마 놀이터 조성 (50코인)", "cost": 50, "effect": {"😊행복": 30, "🌳환경": 10}, "msg": "아이들이 너무 좋아해요! 다른 동네에서도 놀러 와요."}
     },
     {
-        "id": 4, "title": "길고양이 갈등", 
+        "id": 4, "title": "길고양이 갈등", "image": "assets/stray_cats.jpg",
         "desc": "배고픈 고양이 울음소리 때문에 이웃 간 다툼이 있어요.",
         "A": {"label": "고양이 급식소 (5코인)", "cost": 5, "effect": {"😊행복": 10, "🌳환경": -5}, "msg": "싸움은 줄었지만 고양이가 더 모였어요."},
         "B": {"label": "중성화 수술 지원 (25코인)", "cost": 25, "effect": {"🌳환경": 15}, "msg": "장기적으로 개체 수가 조절될 거예요."}
     },
     {
-        "id": 5, "title": "어두운 밤길", 
+        "id": 5, "title": "어두운 밤길", "image": "assets/dark_street.jpg",
         "desc": "가로등이 없어서 밤에 다니기가 너무 무서워요.",
         "A": {"label": "강력 LED 설치 (15코인)", "cost": 15, "effect": {"🛡️안전": 20, "🌳환경": -5}, "msg": "밝아졌지만 빛 공해로 잠을 설친대요."},
         "B": {"label": "자율 방범대 운영 (35코인)", "cost": 35, "effect": {"🛡️안전": 15, "💰경제": 10}, "msg": "일자리는 늘었지만 인건비가 계속 나가요."}
     },
     {
-        "id": 6, "title": "공장 매연", 
+        "id": 6, "title": "공장 매연", "image": "assets/factory_smoke.jpg",
         "desc": "공장에서 나오는 연기 때문에 공기가 탁해요.",
         "A": {"label": "친환경 필터 지원 (30코인)", "cost": 30, "effect": {"🌳환경": 25, "😊행복": 10}, "msg": "공기는 맑아졌지만 예산 출혈이 커요."},
         "B": {"label": "공장 가동 제한 (0코인)", "cost": 0, "effect": {"💰경제": -20, "🌳환경": 15}, "msg": "공기는 좋아졌지만 공장 수익이 줄었어요."}
     },
     {
-        "id": 7, "title": "버스 배차 불편", 
+        "id": 7, "title": "버스 배차 불편", "image": "assets/bus_stop.jpg",
         "desc": "버스가 너무 안 와서 학교 가기가 힘들어요.",
         "A": {"label": "버스 증차 (40코인)", "cost": 40, "effect": {"😊행복": 25, "💰경제": 5}, "msg": "편해졌지만 유지비가 엄청나요!"},
         "B": {"label": "행복 택시 쿠폰 (10코인)", "cost": 10, "effect": {"😊행복": 10}, "msg": "급한 불은 껐지만 근본 해결책은 아니에요."}
@@ -638,6 +638,10 @@ with tab3:
     * **가치 판단**: 편리함과 환경 보호 사이에서 어떤 가치가 더 중요한지 고민해봅니다.
     * **책임감**: 나의 결정이 우리 마을에 어떤 결과를 가져오는지 책임감을 느껴보세요.
     """)
+    
+    # Show Village Map
+    st.image("assets/village_map.png", caption="우리 마을 지도", use_container_width=True)
+    
     st.divider()
     
     # [게임 종료 로직] 모든 턴을 다 쓰면 결과 리포트를 보여줍니다.
@@ -678,6 +682,11 @@ with tab3:
             prob = problems[current_idx]
             
             st.subheader(f"문제 {current_idx + 1}: {prob['title']}")
+            
+            # Show Problem Image
+            if "image" in prob:
+                st.image(prob["image"], use_container_width=True)
+                
             st.write(prob['desc'])
             
             col1, col2 = st.columns(2)
