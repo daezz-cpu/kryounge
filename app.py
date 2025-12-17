@@ -326,7 +326,18 @@ with st.sidebar:
     ))
     fig = px.line_polar(df_stats, r='r', theta='theta', line_close=True, range_r=[0, 100])
     fig.update_traces(fill='toself')
+    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])))
     st.plotly_chart(fig, use_container_width=True)
+    
+    # Text Metrics (지표를 명확하게 표시)
+    st.caption("현재 마을 지표:")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.metric("😊행복", st.session_state.stats.get("😊행복", 50))
+        st.metric("💰경제", st.session_state.stats.get("💰경제", 50))
+    with c2:
+        st.metric("🌳환경", st.session_state.stats.get("🌳환경", 50))
+        st.metric("🛡️안전", st.session_state.stats.get("🛡️안전", 50))
 
 
 st.title("🏙️ 우리 지역 문제를 찾아 현명하게 해결해보자!")
