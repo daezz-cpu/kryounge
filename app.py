@@ -693,3 +693,4 @@ with tab3:
         else:
             st.session_state.game_over = True
             st.rerun()
+
