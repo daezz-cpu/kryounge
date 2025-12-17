@@ -136,7 +136,7 @@ def generate_mayoral_report(stats, budget):
         f"1. A Title (e.g., 'Environmental Hero', 'Balanced Leader', etc.) based on stats.\n"
         f"2. Evaluation: Praise what they did well, and gently point out what was neglected.\n"
         f"3. Final Grade (S, A, B, C).\n"
-        f"Write in Korean, friendly but professional tone."
+        f"Write EVERYTHING in Korean only. Use a friendly but professional tone."
     )
     return get_ai_response(prompt)
 
@@ -419,7 +419,7 @@ with tab1:
                         news_context = f"뉴스 제목: {st.session_state.news_title}, 분야: {st.session_state.news_category}"
                         system_prompt = (
                             f"당신은 '{current_p}'입니다. 우리 동네에 살고 있으며, 현재 '{news_context}' 문제로 인해 겪고 있는 어려움이나 생각을 말해주세요. "
-                            f"사용자는 '꼬마 시장'입니다. 초등학생에게 말하듯이 친근하고, '{current_p}'의 말투(참고: 아이는 존댓말/반말 섞기, 경찰은 듬직하게, 청소부는 구수하게)를 써주세요. "
+                            f"사용자는 '꼬마 시장'입니다. 시장님을 대하듯 예의를 갖추어 반드시 '존댓말'을 사용하세요. (참고: 아이, 경찰, 청소부, 주민 모두 꼬마 시장님에게 공손하게 존댓말을 써야 합니다). "
                             f" 답변은 3문장 이내로 짧게 해주세요."
                             f"\n사용자 메시지: {prompt}"
                         )
