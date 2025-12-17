@@ -83,19 +83,19 @@ def evaluate_policy_with_ai(idea, problem_context):
     prompt = (
         f"Context: {problem_context}\n"
         f"Student's Policy Idea: {idea}\n\n"
-        f"You are an AI policy evaluator for elementary school students.\n"
+        f"You are an AI policy evaluator for elementary school students. You MUST speak Korean ONLY.\n"
         f"Analyze the student's idea based on THREE criteria:\n"
         f"1. **WHAT** (25점): 어떤 정책인지 명확하게 설명했는가?\n"
         f"2. **HOW** (25점): 어떻게 실현/실행할 것인지 구체적인 방법이 있는가?\n"
         f"3. **WHY** (25점): 왜 이 정책이 필요한지, 어떤 문제를 해결하는지 설명했는가?\n"
         f"4. **CREATIVITY** (25점): 창의적이고 참신한 아이디어인가?\n\n"
         f"Calculate total score (0-100) based on these criteria.\n"
-        f"Be encouraging but honest. If a criterion is missing, gently point it out.\n\n"
+        f"Warning: Do NOT use any English in 'ANALYSIS', 'GOOD', or 'IMPROVE'. Write everything in polite Korean.\n\n"
         f"Return the response in the following format ONLY:\n"
         f"SCORE: [0-100 integer]\n"
-        f"ANALYSIS: [Briefly mention which criteria (WHAT/HOW/WHY) were well addressed in Korean]\n"
-        f"GOOD: [1-2 sentences praising what the student did well in Korean]\n"
-        f"IMPROVE: [1-2 sentences suggesting what's missing (WHAT/HOW/WHY) in Korean. If perfect, write 'none']"
+        f"ANALYSIS: [Brief analysis of the idea in Korean (e.g., 정책의 목적이 뚜렷합니다)]\n"
+        f"GOOD: [Praise in Korean (e.g., 구체적인 실천 방안이 돋보입니다)]\n"
+        f"IMPROVE: [Advice in Korean (e.g., 실현 가능성을 조금 더 고민해보세요) - If perfect, write '없음']"
     )
     response = get_ai_response(prompt)
     
@@ -116,7 +116,7 @@ def evaluate_policy_with_ai(idea, problem_context):
                 good = f"{analysis} {good}"  # Combine analysis with good
             if "IMPROVE:" in line:
                 val = line.replace("IMPROVE:", "").strip()
-                if val and val.lower() != "none":
+                if val and val != "없음" and val.lower() != "none" and val != "None":
                     improve = val
     except:
         pass
