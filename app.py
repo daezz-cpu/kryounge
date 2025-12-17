@@ -83,7 +83,7 @@ def evaluate_policy_with_ai(idea, problem_context):
         f"Context: {problem_context}\n"
         f"Student's Policy Idea: {idea}\n\n"
         f"SAFETY CHECK: If the idea contains profanity, violence, self-harm, hate speech, or sexually explicit content, "
-        f"STOP evaluation immediately. Return SCORE: 0, and set 'ANALYSIS', 'GOOD', and 'IMPROVE' to '바르고 고운 말을 사용하여 다시 작성해주세요.' in Korean.\n\n"
+        f"STOP evaluation immediately. Return SCORE: 0, set 'GOOD' to empty string, and set 'IMPROVE' to '비속어 및 폭력적인 언어가 포함되어 있습니다. 바른 말을 사용하여 정책을 다시 제안해주세요.'\n\n"
         f"You are an AI policy evaluator for elementary school students. You MUST speak Korean ONLY.\n"
         f"Analyze the student's idea based on THREE criteria:\n"
         f"1. **WHAT** (25점): 어떤 정책인지 명확하게 설명했는가?\n"
@@ -91,12 +91,12 @@ def evaluate_policy_with_ai(idea, problem_context):
         f"3. **WHY** (25점): 왜 이 정책이 필요한지, 어떤 문제를 해결하는지 설명했는가?\n"
         f"4. **CREATIVITY** (25점): 창의적이고 참신한 아이디어인가?\n\n"
         f"Calculate total score (0-100) based on these criteria.\n"
-        f"Warning: Do NOT use any English in 'ANALYSIS', 'GOOD', or 'IMPROVE'. Write everything in polite Korean.\n\n"
+        f"Warning: Do NOT use any English. If there are no clear positive aspects, leave GOOD section blank.\n\n"
         f"Return the response in the following format ONLY:\n"
         f"SCORE: [0-100 integer]\n"
         f"ANALYSIS: [Brief analysis of the idea in Korean]\n"
-        f"GOOD: [Praise in Korean]\n"
-        f"IMPROVE: [Advice in Korean - If perfect, write '없음']"
+        f"GOOD: [Praise... If none, leave blank]\n"
+        f"IMPROVE: [Advice or Safety Reason]\n"
     )
     response = get_ai_response(prompt)
     
@@ -106,7 +106,7 @@ def evaluate_policy_with_ai(idea, problem_context):
     
     # Safety Guard: AI가 욕설/비속어 등을 감지하여 거부한 경우 0점 처리
     if "바르고 고운 말" in response or "부적절" in response:
-        return 0, "부적절한 내용이 감지되었습니다.", "바르고 고운 말을 사용하여 다시 작성해주세요."
+        return 0, "", "비속어 및 폭력적인 언어가 포함되어 있습니다. 바른 말을 사용하여 정책을 다시 제안해주세요."
     
     # 목적: AI의 줄글 응답을 파싱(분해)하여 점수, 장점, 개선점으로 나누어 변수에 저장합니다.
     try:
@@ -450,6 +450,13 @@ with tab1:
                         )
                         ai_reply = get_ai_response(system_prompt)
                         st.markdown(ai_reply)
+
+                        # Safety Reset Logic
+                        if "바르고 고운 말" in ai_reply or "부적절" in ai_reply or "약속해요" in ai_reply:
+                            st.error("⛔ [안전 가이드라인] 비속어나 폭력적인 언어 사용이 감지되어 대화가 초기화됩니다. 바른 말을 사용해주세요!")
+                            time.sleep(3)
+                            st.session_state.chat_history = []
+                            st.rerun()
                         
                 st.session_state.chat_history.append({"role": "assistant", "content": ai_reply})
         else:
