@@ -437,11 +437,22 @@ with tab1:
                 with st.chat_message("assistant"):
                     with st.spinner(f"{current_p}님이 생각 중입니다..."):
                         news_context = f"뉴스 제목: {st.session_state.news_title}, 분야: {st.session_state.news_category}"
+                        
+                        # Build conversation history string
+                        history_text = ""
+                        # Include up to 6 previous messages to maintain context without overloading
+                        recent_msgs = st.session_state.chat_history[-7:] 
+                        for msg in recent_msgs:
+                            role_label = "꼬마 시장" if msg['role'] == "user" else current_p
+                            history_text += f"{role_label}: {msg['content']}\n"
+                        
                         system_prompt = (
-                            f"당신은 '{current_p}'입니다. 우리 동네에 살고 있으며, 현재 '{news_context}' 문제로 인해 겪고 있는 어려움이나 생각을 말해주세요. "
-                            f"사용자는 '꼬마 시장'입니다. 시장님을 대하듯 예의를 갖추어 반드시 '존댓말'을 사용하세요. (참고: 아이, 경찰, 청소부, 주민 모두 꼬마 시장님에게 공손하게 존댓말을 써야 합니다). "
-                            f" 답변은 3문장 이내로 짧게 해주세요."
-                            f"\n사용자 메시지: {prompt}"
+                            f"당신은 '{current_p}'입니다. 우리 동네에 살고 있으며, 현재 '{news_context}' 문제로 인해 겪고 있는 어려움이나 생각을 말해주세요.\n"
+                            f"사용자는 '꼬마 시장'입니다. 꼬마 시장님을 대하듯 예의를 갖추어 반드시 '존댓말'을 사용하세요. (참고: 아이, 경찰, 청소부, 주민 모두 꼬마 시장님에게 공손하게 존댓말을 써야 합니다).\n"
+                            f"이전 대화 맥락을 파악하고 자연스럽게 이어말하세요. 답변은 3문장 이내로 짧게 해주세요.\n\n"
+                            f"--- 대화 내역 ---\n"
+                            f"{history_text}\n"
+                            f"{current_p}:"
                         )
                         
                         ai_reply = get_ai_response(system_prompt)
