@@ -326,7 +326,16 @@ with st.sidebar:
     ))
     fig = px.line_polar(df_stats, r='r', theta='theta', line_close=True, range_r=[0, 100])
     fig.update_traces(fill='toself')
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])))
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 100]),
+            angularaxis=dict(
+                tickfont=dict(size=12, color="black"), # 글자 크기 키움
+                visible=True
+            )
+        ),
+        margin=dict(t=30, b=30, l=40, r=40) # 여백 확보하여 글자 짤림 방지
+    )
     st.plotly_chart(fig, use_container_width=True)
     
     # Text Metrics (지표를 명확하게 표시)
