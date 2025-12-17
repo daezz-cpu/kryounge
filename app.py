@@ -7,6 +7,8 @@ import google.generativeai as genai
 # -----------------------------------------------------------------------------------------
 # [Setup] 페이지 설정 (반드시 가장 먼저 호출되어야 함)
 # -----------------------------------------------------------------------------------------
+# 목적: 웹 브라우저 탭의 제목, 아이콘, 그리고 전체 레이아웃(넓은 화면 모드)을 초기화합니다.
+# 결과: 사용자가 접속했을 때 브라우저 탭에 '현명한 꼬마 시장님'이라는 제목과 아이콘이 보입니다.
 st.set_page_config(page_title="현명한 꼬마 시장님", layout="wide", page_icon="🏙️")
 
 # -----------------------------------------------------------------------------------------
@@ -15,15 +17,19 @@ st.set_page_config(page_title="현명한 꼬마 시장님", layout="wide", page_
 
 def get_ai_response(prompt):
     """Gemini AI 응답 생성 함수"""
+    # 목적: API 키가 보안 설정(secrets)에 저장되어 있는지 확인하여 오류를 방지합니다.
     if "GEMINI_API_KEY" not in st.secrets:
         return "🔑 API 키가 설정되지 않았어요."
 
+    # 목적: Google Gemini AI를 사용하기 위한 인증 절차를 수행합니다.
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     
     last_error = ""
     available_models = []
 
     try:
+        # 목적: 현재 사용 가능한 AI 모델 목록을 가져와서, 성능이 빠르고 좋은 모델 순서로 정렬합니다.
+        # 결과: 특정 모델이 응답하지 않더라도 다른 모델로 자동 대체하여 안정적인 서비스를 제공합니다.
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         
         sorted_models = sorted(available_models, key=lambda x: (
@@ -33,6 +39,7 @@ def get_ai_response(prompt):
             3
         ))
         
+        # 목적: 정렬된 순서대로 모델에 요청을 보내고, 성공하면 즉시 응답 텍스트를 반환합니다.
         for model_name in sorted_models:
             try:
                 model = genai.GenerativeModel(model_name)
@@ -49,7 +56,10 @@ def get_ai_response(prompt):
 
 def analyze_persona_from_title(title):
     """뉴스 제목 분석 후 페르소나 추천"""
+    # 목적: 사용자가 입력한 사회 문제(뉴스 제목)에 가장 적합한 인터뷰 대상(페르소나)을 정의합니다.
     persona_list = ['등굣길 아이', '청소부 아저씨', '경찰관', '마을 주민']
+    
+    # 목적: AI에게 뉴스 제목을 분석시키고, 위 리스트 중 가장 관련 있는 인물을 하나만 뽑도록 지시합니다.
     prompt = (
         f"Analyze the news title '{title}'. "
         f"Select the most relevant persona from this list: {persona_list}. "
@@ -57,15 +67,18 @@ def analyze_persona_from_title(title):
         f"If the title is vague or you are unsure, default to '마을 주민'. "
         f"Return ONLY the persona name."
     )
-    # 따옴표 제거 처리 안전하게 변경
+    # 결과: AI 응답에서 불필요한 따옴표 등을 제거하여 깔끔한 '역할 이름'만 반환합니다.
     result = get_ai_response(prompt).strip().replace("'", "").replace('"', "")
     
+    # 목적: 혹시라도 AI가 엉뚱한 값을 줄 경우를 대비해 기본값('마을 주민')을 설정합니다.
     if result not in persona_list:
         return "마을 주민"
     return result
     
 def evaluate_policy_with_ai(idea, problem_context):
     """아이디어 평가 및 점수 산출"""
+    # 목적: 학생이 낸 아이디어를 4가지 교육적 기준(명확성, 구체성, 타당성, 창의성)으로 AI가 채점하게 합니다.
+    # 결과: 점수(숫자)와 구체적인 피드백(칭찬, 보완점)을 구조화된 텍스트로 받아옵니다.
     prompt = (
         f"Context: {problem_context}\n"
         f"Student's Policy Idea: {idea}\n\n"
@@ -89,6 +102,7 @@ def evaluate_policy_with_ai(idea, problem_context):
     good = "아이디어가 접수되었습니다."
     improve = None
     
+    # 목적: AI의 줄글 응답을 파싱(분해)하여 점수, 장점, 개선점으로 나누어 변수에 저장합니다.
     try:
         lines = response.strip().split('\n')
         for line in lines:
@@ -110,6 +124,7 @@ def evaluate_policy_with_ai(idea, problem_context):
 
 def generate_mayoral_report(stats, budget):
     """최종 리포트 생성"""
+    # 목적: 게임 종료 후, 플레이어의 활동 결과(지표, 남은 예산)를 바탕으로 격려와 평가가 담긴 성적표를 작성합니다.
     prompt = (
         f"The user has finished the city management game.\n"
         f"Final Stats: {stats}\n"
@@ -125,6 +140,8 @@ def generate_mayoral_report(stats, budget):
 
 def generate_resident_reactions(problem_title, choice_label, choice_effect, choice_msg):
     """정책 선택에 대한 주민 반응 생성"""
+    # 목적: 플레이어의 선택이 실제 주민들의 삶에 어떤 영향을 주는지, 찬성/반대 등 다양한 입장의 대사로 보여줍니다.
+    # 결과: "상인: 장사가 안돼요!" 처럼 생생한 캐릭터 대사가 생성됩니다.
     prompt = (
         f"마을 문제: {problem_title}\n"
         f"시장님이 선택한 정책: {choice_label}\n"
@@ -142,6 +159,8 @@ def generate_resident_reactions(problem_title, choice_label, choice_effect, choi
 
 def check_improvement(original, feedback, new_idea):
     """피드백 반영 여부 확인"""
+    # 목적: 학생이 AI의 피드백을 무시하지 않고, 수정된 아이디어에 반영했는지 AI가 판단합니다.
+    # 결과: 피드백 반영이 확인되면 'YES', 아니면 'NO'를 반환하여 보너스 점수 지급 여부를 결정합니다.
     prompt = (
         f"Original Idea: {original}\n"
         f"Feedback to improve: {feedback}\n"
@@ -160,10 +179,16 @@ def check_improvement(original, feedback, new_idea):
 # [Helper Functions] 세션 상태 초기화
 # -----------------------------------------------------------------------------------------
 def init_game():
+    """
+    Streamlit은 버튼 클릭 등 이벤트가 발생할 때마다 코드가 재실행됩니다.
+    이 함수는 데이터가 초기화되지 않고 유지되도록 'session_state'에 변수들을 저장합니다.
+    """
+    # 게임의 핵심 자원 (예산, 단계별 완료 여부)
     if 'budget' not in st.session_state: st.session_state.budget = 0
     if 'step1_status' not in st.session_state: st.session_state.step1_status = False 
     if 'step2_status' not in st.session_state: st.session_state.step2_status = False 
     
+    # 마을 상태 통계 및 게임 진행 상황
     if 'stats' not in st.session_state:
         st.session_state.stats = {'😊행복': 50, '🌳환경': 50, '🛡️안전': 50, '💰경제': 50}
     if 'turns' not in st.session_state: st.session_state.turns = 5
@@ -171,21 +196,29 @@ def init_game():
     if 'logs' not in st.session_state: st.session_state.logs = []
     if 'game_over' not in st.session_state: st.session_state.game_over = False
         
+    # 뉴스룸(1단계) 관련 데이터
     if 'news_title' not in st.session_state: st.session_state.news_title = ""
     if 'news_category' not in st.session_state: st.session_state.news_category = "교통"
     
+    # 정책 연구소(2단계) 관련 데이터
     if 'interview_summary' not in st.session_state: st.session_state.interview_summary = ""
     if 'policy_eval_result' not in st.session_state: st.session_state.policy_eval_result = {} 
     if 'bonus_claimed' not in st.session_state: st.session_state.bonus_claimed = False
         
+    # 채팅 인터페이스 데이터
     if 'chat_history' not in st.session_state: st.session_state.chat_history = []
     if 'current_persona' not in st.session_state: st.session_state.current_persona = None
     
+    # 최종 결과 및 피드백 데이터
     if 'final_report' not in st.session_state: st.session_state.final_report = ""
     if 'resident_reaction' not in st.session_state: st.session_state.resident_reaction = None
     if 'last_choice_msg' not in st.session_state: st.session_state.last_choice_msg = None
 
 def reset_game():
+    """
+    사용자가 '게임 다시하기'를 눌렀을 때 호출되는 함수입니다.
+    모든 상태 변수를 초기값으로 되돌려 새로운 게임을 시작할 수 있게 만듭니다.
+    """
     st.session_state.budget = 0
     st.session_state.step1_status = False
     st.session_state.step2_status = False
@@ -204,6 +237,7 @@ def reset_game():
     st.session_state.last_choice_msg = None
 
 # [Game Data] 게임 데이터
+# 시뮬레이션 단계에서 사용될 7가지 문제 상황과 선택지(A/B)에 따른 비용 및 효과 데이터입니다.
 problems = [
     {
         "id": 1, "title": "스쿨존 주차난", "image": "assets/school_zone.jpg",
@@ -252,14 +286,17 @@ problems = [
 # -----------------------------------------------------------------------------------------
 # [App Start] 메인 애플리케이션 시작
 # -----------------------------------------------------------------------------------------
+# 목적: 앱 실행 시 세션 변수들이 없으면 에러가 나므로, 초기화 함수를 가장 먼저 호출합니다.
 init_game()
 
 # [Sidebar] 왼쪽 사이드바 구성
+# 목적: 사용자가 어느 탭(페이지)에 있더라도 '현재 예산'과 '마을 상태'를 항상 확인할 수 있게 합니다.
 with st.sidebar:
     st.title(f"💰 현재 예산: {st.session_state.budget} 코인")
     st.divider()
     
     st.subheader("✅ 진행 상황")
+    # 목적: 3단계 학습 과정 중 어디까지 완료했는지 시각적으로(체크박스) 보여줍니다.
     chk1 = "✅" if st.session_state.step1_status else "⬜"
     chk2 = "✅" if st.session_state.step2_status else "⬜"
     chk3 = "✅" if st.session_state.solved_problems else "⬜"
@@ -271,6 +308,7 @@ with st.sidebar:
     st.divider()
     st.subheader("📊 우리 마을 상태")
     
+    # 목적: 행복, 환경, 안전, 경제 4가지 지표의 균형을 시각적으로 보여주기 위해 방사형 차트(Radar Chart)를 그립니다.
     df_stats = pd.DataFrame(dict(
         r=list(st.session_state.stats.values()),
         theta=list(st.session_state.stats.keys())
@@ -279,13 +317,14 @@ with st.sidebar:
     fig.update_traces(fill='toself')
     fig.update_layout(
         polar=dict(
-            radialaxis=dict(visible=True, range=[0, 100]),
+            radialaxis=dict(visible=True, range=[0, 100]), # 그래프 축을 0~100점으로 고정
             angularaxis=dict(tickfont=dict(size=12, color="black"), visible=True)
         ),
         margin=dict(t=30, b=30, l=40, r=40) 
     )
     st.plotly_chart(fig, use_container_width=True)
     
+    # 그래프 아래에 정확한 수치를 텍스트로도 보여줍니다.
     c1, c2 = st.columns(2)
     with c1:
         st.metric("😊행복", st.session_state.stats.get("😊행복", 50))
@@ -296,12 +335,14 @@ with st.sidebar:
 
 
 st.title("🏙️ 우리 지역 문제를 찾아 현명하게 해결해보자!")
+# 목적: 3단계 학습 과정을 탭으로 분리하여 순차적으로 진행하도록 유도합니다.
 tab1, tab2, tab3 = st.tabs(["📰 1단계: 뉴스룸", "💡 2단계: 정책 연구소", "🏛️ 3단계: 꼬마 시장님"])
 
 
 # -----------------------------------------------------------------------------------------
 # [Tab 1] 1단계: 뉴스룸
 # -----------------------------------------------------------------------------------------
+# 목적: 실제 뉴스를 탐색하고 가상의 주민과 대화하며 문제를 발견하는 단계입니다.
 with tab1:
     st.header("📰 우리 동네에 무슨 일이?!")
     st.subheader("Step 1. 리얼 월드 탐색")
@@ -310,9 +351,11 @@ with tab1:
     col_link, col_input = st.columns([1, 2])
     with col_link:
         st.write("")
+        # 목적: 학생들이 쉽게 검색할 수 있도록 네이버 링크 버튼을 제공합니다.
         st.link_button("🔍 네이버에서 검색하기", "https://www.naver.com")
         
     with col_input:
+        # 목적: 사용자가 찾은 뉴스 제목과 카테고리를 입력받습니다.
         title_in = st.text_input("기사 제목을 입력하세요", value=st.session_state.news_title)
         
         # Selectbox 라인이 길어서 오류가 날 수 있으므로 분리
@@ -322,17 +365,19 @@ with tab1:
         
         if st.button("📝 기사 등록"):
             if len(title_in) > 1:
+                # 입력값을 세션 상태에 저장하여 다른 탭에서도 참조할 수 있게 합니다.
                 st.session_state.news_title = title_in
                 st.session_state.news_category = cat_in
                 
                 with st.spinner("AI가 기사 내용을 분석하여 인터뷰 대상을 찾고 있습니다..."):
+                      # AI 함수를 호출하여 뉴스 주제에 맞는 인터뷰 대상을 추천받습니다.
                       recommended_persona = analyze_persona_from_title(title_in)
                       st.session_state.current_persona = recommended_persona
                       st.session_state.chat_history = [] 
                       
                       # f-string 안전 처리
                       toast_msg = f"AI 추천: 이 뉴스는 '{recommended_persona}'와 대화하는 것이 좋겠어요!"
-                      st.toast(toast_msg, icon="🤖")
+                      st.toast(toast_msg, icon="🤖") # 우측 상단에 팝업 알림을 띄웁니다.
 
                 st.success("기사가 등록되었습니다! 아래 주민 인터뷰를 진행하세요.")
             else:
@@ -344,6 +389,7 @@ with tab1:
     if st.session_state.news_title:
         st.write("누구와 인터뷰할까요? 인물을 선택하면 새로운 대화가 시작됩니다.")
         
+        # 목적: 4가지 역할 버튼을 제공하여, 클릭 시 해당 인물과 대화 모드로 전환합니다.
         col_p1, col_p2, col_p3, col_p4 = st.columns(4)
         def set_persona(p_name):
             st.session_state.current_persona = p_name
@@ -360,26 +406,32 @@ with tab1:
             
         current_p = st.session_state.current_persona
         
+        # 인터뷰 대상이 선택된 경우 채팅 인터페이스를 표시합니다.
         if current_p:
             st.markdown(f"### 💬 지금 **'{current_p}'**님과 인터뷰 중입니다.")
             
+            # 기존 대화 기록을 화면에 다시 그려줍니다 (Streamlit은 매번 새로 그리기 때문).
             for message in st.session_state.chat_history:
                 with st.chat_message(message["role"]):
                     st.markdown(message["content"])
             
+            # 사용자가 질문을 입력했을 때 실행되는 로직
             if prompt := st.chat_input("질문을 입력하세요..."):
                 st.session_state.chat_history.append({"role": "user", "content": prompt})
                 with st.chat_message("user"):
                     st.markdown(prompt)
                 
+                # AI 답변 생성
                 with st.chat_message("assistant"):
                     with st.spinner(f"{current_p}님이 생각 중입니다..."):
                         news_context = f"뉴스 제목: {st.session_state.news_title}, 분야: {st.session_state.news_category}"
                         history_text = ""
+                        # 최근 대화 내용 일부를 AI에게 함께 보내 문맥을 유지합니다.
                         for msg in st.session_state.chat_history[-7:]:
                             role_label = "꼬마 시장" if msg['role'] == "user" else current_p
                             history_text += f"{role_label}: {msg['content']}\n"
                         
+                        # AI에게 역할(페르소나)을 부여하는 시스템 프롬프트
                         system_prompt = (
                             f"당신은 '{current_p}'입니다. 우리 동네에 살고 있으며, '{news_context}' 문제로 인해 겪는 어려움을 말해주세요.\n"
                             f"사용자는 '꼬마 시장'입니다. 반드시 존댓말을 사용하세요.\n"
@@ -395,6 +447,7 @@ with tab1:
              st.info("👆 위 버튼을 눌러 인터뷰하고 싶은 주민을 선택해주세요!")
 
         st.divider()
+        # 목적: 인터뷰를 충분히(3회 이상) 진행했는지 확인하고, 보상(코인)을 지급합니다.
         if st.button("✅ 취재 완료 (코인 받기)"):
             user_msg_count = len([m for m in st.session_state.chat_history if m['role'] == 'user'])
             
@@ -402,10 +455,10 @@ with tab1:
                 if user_msg_count >= 3:
                     st.session_state.budget += 50
                     st.session_state.step1_status = True
-                    st.balloons()
+                    st.balloons() # 축하 효과
                     st.success("취재비 50코인을 받았습니다! (정책 연구소로 이동하세요)")
                     time.sleep(1) 
-                    st.rerun()
+                    st.rerun() # 예산 업데이트 반영을 위해 화면 새로고침
                 else:
                     st.warning(f"인터뷰가 부족해요! 주민에게 최소 3가지 이상 질문을 해주세요. (현재: {user_msg_count}/3)")
             else:
@@ -416,6 +469,7 @@ with tab1:
 # -----------------------------------------------------------------------------------------
 # [Tab 2] 2단계: 정책 연구소
 # -----------------------------------------------------------------------------------------
+# 목적: 1단계에서 파악한 문제를 해결할 아이디어를 제안하고, AI의 평가 및 피드백을 받는 단계입니다.
 with tab2:
     st.header("💡 정책 아이디어 연구소")
     st.write("해결책을 제안하고 예산을 확보하세요!")
@@ -423,6 +477,7 @@ with tab2:
     if st.session_state.news_title:
         st.success(f"📌 해결해야 할 문제: **{st.session_state.news_title}** [{st.session_state.news_category}]")
         
+        # 인터뷰 내용이 있다면 요약하여 보여줌으로써 아이디어 구상을 돕습니다.
         if not st.session_state.interview_summary and st.session_state.chat_history:
              st.session_state.interview_summary = "인터뷰 요약 (임시): 주민들이 해당 문제에 대해 다양한 의견을 가지고 있습니다." 
         
@@ -435,13 +490,16 @@ with tab2:
     idea_in = st.text_area("나만의 아이디어를 적어주세요.", height=150)
     
     if st.button("🤖 AI 심사 받기"):
+        # 아직 2단계를 완료하지 않은 경우에만 심사를 진행합니다.
         if not st.session_state.step2_status:
             with st.spinner("AI 심사위원이 정책을 분석 중입니다..."):
                 problem_ctx = f"Problem: {st.session_state.news_title}, Category: {st.session_state.news_category}"
+                # 작성된 아이디어를 AI에게 보내 점수와 피드백을 받아옵니다.
                 score, good, improve = evaluate_policy_with_ai(idea_in, problem_ctx)
                 
                 st.session_state.policy_eval_result = {"score": score, "good": good, "improve": improve}
                 
+                # 점수 구간에 따라 지급할 예산을 차등 설정합니다.
                 if score >= 80: score_acc = 100
                 elif score >= 50: score_acc = 70
                 else: score_acc = 40
@@ -454,12 +512,14 @@ with tab2:
         else:
             st.warning("이미 정책 지원금을 받았습니다.")
 
+    # 심사 결과가 있는 경우 화면에 결과를 출력합니다.
     if st.session_state.step2_status and st.session_state.policy_eval_result:
         res = st.session_state.policy_eval_result
         st.divider()
         st.subheader(f"📊 심사 결과: {res['score']}점")
         st.success(f"✅ 잘한 점: {res['good']}")
         
+        # 목적: 개선할 점이 있다면 추가 예산(보너스)을 걸고 아이디어 수정을 유도합니다 (학습 효과 증대).
         if res['improve']:
             st.warning(f"🔧 보완할 점: {res['improve']}")
             
@@ -473,6 +533,7 @@ with tab2:
                 if st.button("✨ 보완 제출"):
                     if len(refined_idea) > 5:
                         with st.spinner("AI가 보완 여부를 확인 중입니다..."):
+                            # AI를 통해 피드백 반영 여부를 검사합니다.
                             is_improved = check_improvement(idea_in, res['improve'], refined_idea)
                             if is_improved:
                                 st.session_state.budget += 30
@@ -493,17 +554,18 @@ with tab2:
 # -----------------------------------------------------------------------------------------
 # [Tab 3] 3단계: 꼬마 시장님
 # -----------------------------------------------------------------------------------------
+# 목적: 확보한 예산을 사용하여 실제 발생하는 5가지 마을 문제를 해결하는 시뮬레이션 게임입니다.
 with tab3:
     st.header("🏛️ 꼬마 시장님 시뮬레이션")
     
-    # 접근 제어
+    # 접근 제어: 1, 2단계를 완료하지 않으면 게임에 진입할 수 없도록 막습니다.
     if not st.session_state.step1_status or not st.session_state.step2_status:
         st.warning("⚠️ 1단계와 2단계를 먼저 완료해야 게임에 도전할 수 있어요!")
         if not st.session_state.step1_status:
             st.error("❌ 1단계 '뉴스룸'을 아직 완료하지 않았어요.")
         if not st.session_state.step2_status:
             st.error("❌ 2단계 '정책 연구소'를 아직 완료하지 않았어요.")
-        st.stop()
+        st.stop() # 이후 코드 실행 중단
     
     # [문제 발생 지점 수정] 긴 문자열을 안전하게 처리 (줄바꿈 오류 방지)
     info_text = (
@@ -520,10 +582,12 @@ with tab3:
     st.image("assets/village_map.png", caption="우리 마을 지도", use_container_width=True)
     st.divider()
     
+    # 게임 종료 시 최종 리포트 화면
     if st.session_state.game_over:
         st.error("게임이 종료되었습니다! 최종 결과를 확인하세요.")
         st.metric("최종 남은 예산", f"{st.session_state.budget} 코인")
         
+        # AI를 통해 최종 성적표를 생성합니다 (1회만 생성 후 저장).
         if not st.session_state.final_report:
             with st.spinner("AI가 리포트를 작성 중입니다..."):
                 st.session_state.final_report = generate_mayoral_report(st.session_state.stats, st.session_state.budget)
@@ -535,8 +599,10 @@ with tab3:
             reset_game()
             st.rerun()
     else:
+        # 게임 진행 중: 남은 턴 표시
         st.write(f"남은 턴: {st.session_state.turns}")
         
+        # 주민 반응 피드백 화면 (선택 직후 표시됨)
         if st.session_state.resident_reaction:
             st.divider()
             st.success(f"📢 정책 결과: {st.session_state.last_choice_msg}")
@@ -549,6 +615,7 @@ with tab3:
                 st.rerun()
             st.stop() 
         
+        # 현재 턴에 해당하는 문제를 가져와 화면에 표시합니다.
         current_idx = 5 - st.session_state.turns
         if current_idx < len(problems):
             prob = problems[current_idx]
@@ -558,12 +625,15 @@ with tab3:
             st.write(prob['desc'])
             
             col1, col2 = st.columns(2)
+            # 선택지 A 버튼 및 로직
             with col1:
                 st.info(f"선택 A: {prob['A']['label']}")
                 st.caption(f"효과: {prob['A']['effect']}")
                 if st.button("선택 A 실행", key=f"btn_a_{current_idx}"):
+                    # 예산 체크
                     if st.session_state.budget >= prob['A']['cost']:
                         st.session_state.budget -= prob['A']['cost']
+                        # 능력치 업데이트 (0~100 범위 제한)
                         for k, v in prob['A']['effect'].items():
                             st.session_state.stats[k] = min(100, max(0, st.session_state.stats[k] + v))
                         
@@ -571,16 +641,19 @@ with tab3:
                         st.session_state.solved_problems.append(prob['id'])
                         st.session_state.last_choice_msg = prob['A']['msg']
                         
+                        # AI 주민 반응 생성
                         with st.spinner("주민 반응 확인 중..."):
                             reaction = generate_resident_reactions(prob['title'], prob['A']['label'], str(prob['A']['effect']), prob['A']['msg'])
                             st.session_state.resident_reaction = reaction
                         
+                        # 턴 감소 및 게임 종료 여부 확인
                         st.session_state.turns -= 1
                         if st.session_state.turns == 0: st.session_state.game_over = True
                         st.rerun()
                     else:
                         st.error("예산이 부족해요!")
-                        
+            
+            # 선택지 B 버튼 및 로직 (A와 구조 동일)
             with col2:
                 st.info(f"선택 B: {prob['B']['label']}")
                 st.caption(f"효과: {prob['B']['effect']}")
